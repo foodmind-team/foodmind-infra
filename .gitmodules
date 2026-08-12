@@ -1,0 +1,12 @@
+[submodule "services/backend"]
+	path = services/backend
+	url = git@github.com:foodmind-team/foodmind-backend.git
+[submodule "services/intelligence"]
+	path = services/intelligence
+	url = git@github.com:foodmind-team/foodmind-intelligence.git
+[submodule "services/ml"]
+	path = services/ml
+	url = git@github.com:foodmind-team/foodmind-ml.git
+[submodule "services/docs"]
+	path = services/docs
+	url = git@github.com:foodmind-team/foodmind-docs.git
