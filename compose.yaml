@@ -1,0 +1,205 @@
+name: foodmind
+
+services:
+  postgres:
+    image: postgres:18.4
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      TZ: UTC
+      PGTZ: UTC
+    ports:
+      - "127.0.0.1:${POSTGRES_PORT}:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    networks: [runtime]
+
+  minio:
+    image: minio/minio:RELEASE.2025-04-22T22-12-26Z
+    command: server /data --console-address :9001
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD}
+    ports:
+      - "127.0.0.1:${MINIO_API_PORT}:9000"
+      - "127.0.0.1:${MINIO_CONSOLE_PORT}:9001"
+    volumes:
+      - minio-data:/data
+    healthcheck:
+      test: ["CMD", "mc", "ready", "local"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    networks: [runtime]
+
+  minio-init:
+    image: minio/mc:RELEASE.2025-04-16T18-13-26Z
+    entrypoint: ["/bin/sh", "-ec"]
+    depends_on:
+      minio:
+        condition: service_healthy
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD}
+      MEDIA_S3_BUCKET: ${MEDIA_S3_BUCKET}
+    command:
+      - |
+        mc alias set local http://minio:9000 "$$MINIO_ROOT_USER" "$$MINIO_ROOT_PASSWORD"
+        mc mb --ignore-existing "local/$$MEDIA_S3_BUCKET"
+    networks: [runtime]
+
+  model-package:
+    image: python:3.13-slim
+    working_dir: /ml
+    command:
+      - sh
+      - -ec
+      - pip install --no-cache-dir numpy==2.3.2 && python scripts/build_runtime_package.py --output /model-package
+    volumes:
+      - ./services/ml:/ml:ro
+      - model-package:/model-package
+    networks: [runtime]
+
+  inference:
+    build:
+      context: ./services/intelligence/inference-service
+    image: foodmind/inference:${FOODMIND_IMAGE_TAG:-dev}
+    environment:
+      INFERENCE_APP_ENV: local
+      INFERENCE_INTERNAL_SERVICE_TOKEN: ${INFERENCE_INTERNAL_SERVICE_TOKEN}
+      INFERENCE_MODEL_PACKAGE_DIR: /model-package
+    volumes:
+      - model-package:/model-package:ro
+    depends_on:
+      model-package:
+        condition: service_completed_successfully
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8002/health/ready', timeout=2)"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    networks: [runtime]
+
+  recommendation:
+    build:
+      context: ./services/intelligence/agent-service/app/agents/recommendation
+      args:
+        SOURCE_REVISION: ${FOODMIND_IMAGE_TAG:-dev}
+    image: foodmind/recommendation:${FOODMIND_IMAGE_TAG:-dev}
+    environment:
+      RECOMMENDATION_AGENT_APP_ENV: local
+      RECOMMENDATION_AGENT_INTERNAL_SERVICE_TOKEN: ${RECOMMENDATION_AGENT_SERVICE_TOKEN}
+      RECOMMENDATION_AGENT_SUPPORTED_CONTRACT_VERSIONS: recommendation-agent-v2
+      RECOMMENDATION_AGENT_INFERENCE_BASE_URL: http://inference:8002
+      RECOMMENDATION_AGENT_INFERENCE_SERVICE_TOKEN: ${INFERENCE_INTERNAL_SERVICE_TOKEN}
+      RECOMMENDATION_AGENT_LLM_ENABLED: ${FOODMIND_LLM_ENABLED:-false}
+      DEEPSEEK_API_KEY: ${DEEPSEEK_API_KEY:-}
+    depends_on:
+      inference:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8004/health/ready', timeout=2)"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    networks: [runtime]
+
+  cooking:
+    build:
+      context: ./services/intelligence/agent-service/app/agents/cooking
+    image: foodmind/cooking:${FOODMIND_IMAGE_TAG:-dev}
+    environment:
+      COOKING_PLAN_ENVIRONMENT: local
+      COOKING_PLAN_INTERNAL_SERVICE_TOKEN: ${COOKING_AGENT_SERVICE_TOKEN}
+      COOKING_PLAN_SAFETY_POLICY_REGION: SG
+      COOKING_PLAN_TASK_API_ENABLED: "true"
+      COOKING_PLAN_CHECKPOINT_ENABLED: "false"
+      COOKING_PLAN_LLM_ENABLED: ${FOODMIND_LLM_ENABLED:-false}
+      DEEPSEEK_API_KEY: ${DEEPSEEK_API_KEY:-}
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8003/health/ready', timeout=2)"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    networks: [runtime]
+
+  chatbot:
+    build:
+      context: ./services/intelligence/agent-service/app/agents/chatbot
+    image: foodmind/chatbot:${FOODMIND_IMAGE_TAG:-dev}
+    environment:
+      CHAT_AGENT_ENVIRONMENT: local
+      CHAT_AGENT_INTERNAL_SERVICE_TOKEN: ${CHAT_AGENT_SERVICE_TOKEN}
+      CHAT_AGENT_BACKEND_BASE_URL: http://backend:8080
+      CHAT_AGENT_BACKEND_SERVICE_TOKEN: ${INTERNAL_SERVICE_TOKEN}
+      CHAT_AGENT_LLM_ENABLED: ${FOODMIND_LLM_ENABLED:-false}
+      DEEPSEEK_API_KEY: ${DEEPSEEK_API_KEY:-}
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8001/health/ready', timeout=2)"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    networks: [runtime]
+
+  backend:
+    build:
+      context: ./services/backend
+    image: foodmind/backend:${FOODMIND_IMAGE_TAG:-dev}
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+      DB_URL: jdbc:postgresql://postgres:5432/${POSTGRES_DB}
+      DB_USERNAME: ${POSTGRES_USER}
+      DB_PASSWORD: ${POSTGRES_PASSWORD}
+      JWT_SECRET: ${JWT_SECRET}
+      FOODMIND_SECURITY_WEB_COOKIE_SECURE: "false"
+      FOODMIND_SECURITY_WEB_ALLOWED_ORIGINS: http://localhost:3000,http://127.0.0.1:3000,http://localhost:4173,http://127.0.0.1:4173,http://localhost:5173,http://127.0.0.1:5173
+      INTERNAL_SERVICE_TOKEN: ${INTERNAL_SERVICE_TOKEN}
+      RECOMMENDATION_AGENT_BASE_URL: http://recommendation:8004
+      RECOMMENDATION_AGENT_SERVICE_TOKEN: ${RECOMMENDATION_AGENT_SERVICE_TOKEN}
+      RECOMMENDATION_AGENT_CONTRACT_VERSION: recommendation-agent-v2
+      COOKING_AGENT_BASE_URL: http://cooking:8003
+      COOKING_AGENT_SERVICE_TOKEN: ${COOKING_AGENT_SERVICE_TOKEN}
+      COOKING_TASK_POLL_ENABLED: "true"
+      CHAT_AGENT_BASE_URL: http://chatbot:8001
+      CHAT_AGENT_SERVICE_TOKEN: ${CHAT_AGENT_SERVICE_TOKEN}
+      MEDIA_ENABLED: ${MEDIA_ENABLED:-false}
+      MEDIA_S3_BUCKET: ${MEDIA_S3_BUCKET}
+      MEDIA_S3_REGION: ${MEDIA_S3_REGION}
+      MEDIA_S3_ENDPOINT: http://minio:9000
+      MEDIA_S3_ACCESS_KEY: ${MINIO_ROOT_USER}
+      MEDIA_S3_SECRET_KEY: ${MINIO_ROOT_PASSWORD}
+    ports:
+      - "127.0.0.1:${BACKEND_PORT}:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      minio-init:
+        condition: service_completed_successfully
+      recommendation:
+        condition: service_healthy
+      cooking:
+        condition: service_healthy
+      chatbot:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "--fail", "--silent", "http://127.0.0.1:8080/actuator/health/readiness"]
+      interval: 5s
+      timeout: 3s
+      retries: 24
+      start_period: 30s
+    networks: [runtime]
+
+networks:
+  runtime:
+    name: foodmind-runtime
+
+volumes:
+  postgres-data:
+  minio-data:
+  model-package:
