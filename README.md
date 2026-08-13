@@ -38,10 +38,11 @@ DEEPSEEK_API_KEY=your-key
 ```
 
 Chatbot defaults to `deepseek-v4-pro` in non-thinking mode with temperature
-`1.3`, allowing varied conversational answers while Backend-authorised facts
-remain fixed grounding constraints. These Chatbot-specific values can be
-overridden with `CHAT_AGENT_LLM_MODEL`, `CHAT_AGENT_LLM_TEMPERATURE`, and
-`CHAT_AGENT_LLM_THINKING_ENABLED`.
+`1.0` and an 800-token output cap, allowing varied conversational answers
+without long-form drift while Backend-authorised facts remain fixed grounding
+constraints. These Chatbot-specific values can be overridden with
+`CHAT_AGENT_LLM_MODEL`, `CHAT_AGENT_LLM_TEMPERATURE`,
+`CHAT_AGENT_LLM_MAX_OUTPUT_TOKENS`, and `CHAT_AGENT_LLM_THINKING_ENABLED`.
 
 ```powershell
 docker compose up -d --force-recreate recommendation cooking chatbot
