@@ -35,11 +35,14 @@ No Backend, database, MinIO, Agent, or Inference port is published by
 - Recommendation and Inference retain `local` environment labels. The checked-in
   model manifest is approved only for local use, and Recommendation production
   mode requires a private HTTPS Inference origin.
-- The model package is built from the pinned ML submodule during deployment. A
-  production release must consume a pre-approved immutable artifact and checksum.
+- The manual bootstrap path builds the model package from the pinned ML
+  submodule. Continuous delivery instead consumes a reviewed immutable ECR
+  digest; see `staging-continuous-delivery.md`.
 - Cooking task execution is single-instance and uses container-local state for
   in-flight tasks. Restarting the container may lose an unfinished task.
-- The stack builds images on EC2 and does not provide zero-downtime deployment.
+- The manual bootstrap path builds images on EC2. The continuous-delivery path
+  pulls immutable images but still cannot provide zero-downtime deployment on a
+  single EC2 instance.
 
 These boundaries must remain visible in demo evidence. They are not production
 approvals.
@@ -222,6 +225,11 @@ credentials, DeepSeek keys, or user content in evidence.
 
 ## Operations
 
+For automated digest-based releases, follow
+[`staging-continuous-delivery.md`](staging-continuous-delivery.md). The commands
+below describe the manual source-build fallback and must not be mixed into an
+active automated deployment.
+
 View status and bounded logs:
 
 ```bash
@@ -254,9 +262,9 @@ data is confirmed disposable.
 
 ## Production migration
 
-Before real production traffic, replace this topology with immutable ECR images,
-ALB/ACM, ECS services, Service Connect TLS, private RDS Multi-AZ, S3, Secrets
-Manager injection, CloudWatch alarms, an immutable model registry, durable
-Cooking task state, IaC, staged rollout, and tested rollback. Remove every
-demo-only environment exception rather than relabelling the EC2 stack as
+Before real production traffic, retain immutable ECR images but replace this
+topology with ALB/ACM, ECS services, Service Connect TLS, private RDS Multi-AZ,
+S3, Secrets Manager injection, CloudWatch alarms, an immutable model registry,
+durable Cooking task state, IaC, staged rollout, and tested rollback. Remove
+every demo-only environment exception rather than relabelling the EC2 stack as
 production.

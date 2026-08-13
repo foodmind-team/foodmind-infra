@@ -16,7 +16,7 @@ services:
     build:
       context: ./services/ml
       dockerfile: ../../docker/model-package.Dockerfile
-    image: foodmind/model-package:${FOODMIND_IMAGE_TAG}
+    image: ${FOODMIND_MODEL_PACKAGE_IMAGE:-foodmind/model-package:${FOODMIND_IMAGE_TAG}}
     command: ["--output", "/model-package"]
     restart: "no"
     volumes:
@@ -30,7 +30,7 @@ services:
     <<: *runtime-service
     build:
       context: ./services/intelligence/inference-service
-    image: foodmind/inference:${FOODMIND_IMAGE_TAG}
+    image: ${FOODMIND_INFERENCE_IMAGE:-foodmind/inference:${FOODMIND_IMAGE_TAG}}
     environment:
       # The checked-in model manifest is approved only for local/demo use.
       INFERENCE_APP_ENV: local
@@ -62,7 +62,7 @@ services:
       context: ./services/intelligence/agent-service/app/agents/recommendation
       args:
         SOURCE_REVISION: ${FOODMIND_IMAGE_TAG}
-    image: foodmind/recommendation:${FOODMIND_IMAGE_TAG}
+    image: ${FOODMIND_RECOMMENDATION_IMAGE:-foodmind/recommendation:${FOODMIND_IMAGE_TAG}}
     environment:
       # Production mode rejects plain HTTP inference. This single-host demo
       # keeps the service on an unexposed Docker network and records the gap.
@@ -92,7 +92,7 @@ services:
     cpus: 1.0
 
   cooking-data-init:
-    image: foodmind/cooking:${FOODMIND_IMAGE_TAG}
+    image: ${FOODMIND_COOKING_IMAGE:-foodmind/cooking:${FOODMIND_IMAGE_TAG}}
     user: "0:0"
     entrypoint: ["/bin/sh", "-c"]
     command: ["chown -R agent:agent /app/data"]
@@ -107,7 +107,7 @@ services:
     <<: *runtime-service
     build:
       context: ./services/intelligence/agent-service/app/agents/cooking
-    image: foodmind/cooking:${FOODMIND_IMAGE_TAG}
+    image: ${FOODMIND_COOKING_IMAGE:-foodmind/cooking:${FOODMIND_IMAGE_TAG}}
     environment:
       COOKING_PLAN_ENVIRONMENT: staging
       COOKING_PLAN_INTERNAL_SERVICE_TOKEN: ${COOKING_AGENT_SERVICE_TOKEN}
@@ -154,7 +154,7 @@ services:
     <<: *runtime-service
     build:
       context: ./services/intelligence/agent-service/app/agents/chatbot
-    image: foodmind/chatbot:${FOODMIND_IMAGE_TAG}
+    image: ${FOODMIND_CHATBOT_IMAGE:-foodmind/chatbot:${FOODMIND_IMAGE_TAG}}
     environment:
       CHAT_AGENT_ENVIRONMENT: staging
       CHAT_AGENT_INTERNAL_SERVICE_TOKEN: ${CHAT_AGENT_SERVICE_TOKEN}
@@ -178,7 +178,7 @@ services:
     <<: *runtime-service
     build:
       context: ./services/backend
-    image: foodmind/backend:${FOODMIND_IMAGE_TAG}
+    image: ${FOODMIND_BACKEND_IMAGE:-foodmind/backend:${FOODMIND_IMAGE_TAG}}
     environment:
       # The docker profile is retained for the AWS demo because the repository
       # production profile contract is not yet aligned with its implementation.
@@ -237,7 +237,7 @@ services:
     <<: *runtime-service
     build:
       context: ${FOODMIND_WEB_CONTEXT:-../foodmind-web}
-    image: foodmind/web:${FOODMIND_IMAGE_TAG}
+    image: ${FOODMIND_WEB_IMAGE:-foodmind/web:${FOODMIND_IMAGE_TAG}}
     depends_on:
       backend:
         condition: service_healthy

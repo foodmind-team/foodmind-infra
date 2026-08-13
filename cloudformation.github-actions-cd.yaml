@@ -1,0 +1,355 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: FoodMind staging ECR repositories and least-privilege GitHub Actions OIDC publish and deployment roles.
+
+Parameters:
+  InstanceId:
+    Type: AWS::EC2::Instance::Id
+    Description: Existing FoodMind staging EC2 instance managed through Systems Manager.
+  InstanceRoleName:
+    Type: String
+    Default: foodmind-demo-ec2-role
+    AllowedPattern: '^[A-Za-z0-9+=,.@_-]{1,64}$'
+    Description: IAM role already attached to the staging EC2 instance.
+  DatabaseInstanceIdentifier:
+    Type: String
+    Default: foodmind-demo-db
+    AllowedPattern: '^[A-Za-z][A-Za-z0-9-]{0,62}$'
+  ExistingGitHubOidcProviderArn:
+    Type: String
+    Default: ''
+    Description: Existing token.actions.githubusercontent.com provider ARN, or blank to create it.
+  GitHubOrganization:
+    Type: String
+    Default: foodmind-team
+    AllowedPattern: '^[A-Za-z0-9_.-]+$'
+  GitHubRepository:
+    Type: String
+    Default: foodmind-infra
+    AllowedPattern: '^[A-Za-z0-9_.-]+$'
+  EnvironmentName:
+    Type: String
+    Default: staging
+    AllowedPattern: '^[A-Za-z0-9_.-]+$'
+
+Conditions:
+  CreateGitHubOidcProvider: !Equals [!Ref ExistingGitHubOidcProviderArn, '']
+
+Resources:
+  ModelPackageRepository:
+    Type: AWS::ECR::Repository
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
+    Properties:
+      RepositoryName: foodmind/model-package
+      ImageTagMutability: IMMUTABLE
+      ImageScanningConfiguration:
+        ScanOnPush: true
+      EncryptionConfiguration:
+        EncryptionType: AES256
+      LifecyclePolicy:
+        LifecyclePolicyText: >-
+          {"rules":[{"rulePriority":1,"description":"Retain the newest 30 images for staged rollback","selection":{"tagStatus":"any","countType":"imageCountMoreThan","countNumber":30},"action":{"type":"expire"}}]}
+      Tags:
+        - Key: Application
+          Value: foodmind
+        - Key: Environment
+          Value: !Ref EnvironmentName
+
+  InferenceRepository:
+    Type: AWS::ECR::Repository
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
+    Properties:
+      RepositoryName: foodmind/inference
+      ImageTagMutability: IMMUTABLE
+      ImageScanningConfiguration:
+        ScanOnPush: true
+      EncryptionConfiguration:
+        EncryptionType: AES256
+      LifecyclePolicy:
+        LifecyclePolicyText: >-
+          {"rules":[{"rulePriority":1,"description":"Retain the newest 30 images for staged rollback","selection":{"tagStatus":"any","countType":"imageCountMoreThan","countNumber":30},"action":{"type":"expire"}}]}
+      Tags:
+        - Key: Application
+          Value: foodmind
+        - Key: Environment
+          Value: !Ref EnvironmentName
+
+  RecommendationRepository:
+    Type: AWS::ECR::Repository
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
+    Properties:
+      RepositoryName: foodmind/recommendation
+      ImageTagMutability: IMMUTABLE
+      ImageScanningConfiguration:
+        ScanOnPush: true
+      EncryptionConfiguration:
+        EncryptionType: AES256
+      LifecyclePolicy:
+        LifecyclePolicyText: >-
+          {"rules":[{"rulePriority":1,"description":"Retain the newest 30 images for staged rollback","selection":{"tagStatus":"any","countType":"imageCountMoreThan","countNumber":30},"action":{"type":"expire"}}]}
+      Tags:
+        - Key: Application
+          Value: foodmind
+        - Key: Environment
+          Value: !Ref EnvironmentName
+
+  CookingRepository:
+    Type: AWS::ECR::Repository
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
+    Properties:
+      RepositoryName: foodmind/cooking
+      ImageTagMutability: IMMUTABLE
+      ImageScanningConfiguration:
+        ScanOnPush: true
+      EncryptionConfiguration:
+        EncryptionType: AES256
+      LifecyclePolicy:
+        LifecyclePolicyText: >-
+          {"rules":[{"rulePriority":1,"description":"Retain the newest 30 images for staged rollback","selection":{"tagStatus":"any","countType":"imageCountMoreThan","countNumber":30},"action":{"type":"expire"}}]}
+      Tags:
+        - Key: Application
+          Value: foodmind
+        - Key: Environment
+          Value: !Ref EnvironmentName
+
+  ChatbotRepository:
+    Type: AWS::ECR::Repository
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
+    Properties:
+      RepositoryName: foodmind/chatbot
+      ImageTagMutability: IMMUTABLE
+      ImageScanningConfiguration:
+        ScanOnPush: true
+      EncryptionConfiguration:
+        EncryptionType: AES256
+      LifecyclePolicy:
+        LifecyclePolicyText: >-
+          {"rules":[{"rulePriority":1,"description":"Retain the newest 30 images for staged rollback","selection":{"tagStatus":"any","countType":"imageCountMoreThan","countNumber":30},"action":{"type":"expire"}}]}
+      Tags:
+        - Key: Application
+          Value: foodmind
+        - Key: Environment
+          Value: !Ref EnvironmentName
+
+  BackendRepository:
+    Type: AWS::ECR::Repository
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
+    Properties:
+      RepositoryName: foodmind/backend
+      ImageTagMutability: IMMUTABLE
+      ImageScanningConfiguration:
+        ScanOnPush: true
+      EncryptionConfiguration:
+        EncryptionType: AES256
+      LifecyclePolicy:
+        LifecyclePolicyText: >-
+          {"rules":[{"rulePriority":1,"description":"Retain the newest 30 images for staged rollback","selection":{"tagStatus":"any","countType":"imageCountMoreThan","countNumber":30},"action":{"type":"expire"}}]}
+      Tags:
+        - Key: Application
+          Value: foodmind
+        - Key: Environment
+          Value: !Ref EnvironmentName
+
+  WebRepository:
+    Type: AWS::ECR::Repository
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
+    Properties:
+      RepositoryName: foodmind/web
+      ImageTagMutability: IMMUTABLE
+      ImageScanningConfiguration:
+        ScanOnPush: true
+      EncryptionConfiguration:
+        EncryptionType: AES256
+      LifecyclePolicy:
+        LifecyclePolicyText: >-
+          {"rules":[{"rulePriority":1,"description":"Retain the newest 30 images for staged rollback","selection":{"tagStatus":"any","countType":"imageCountMoreThan","countNumber":30},"action":{"type":"expire"}}]}
+      Tags:
+        - Key: Application
+          Value: foodmind
+        - Key: Environment
+          Value: !Ref EnvironmentName
+
+  GitHubOidcProvider:
+    Type: AWS::IAM::OIDCProvider
+    Condition: CreateGitHubOidcProvider
+    Properties:
+      Url: https://token.actions.githubusercontent.com
+      ClientIdList:
+        - sts.amazonaws.com
+      Tags:
+        - Key: Application
+          Value: foodmind
+        - Key: Environment
+          Value: !Ref EnvironmentName
+
+  GitHubStagingDeployRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: foodmind-github-staging-deploy
+      MaxSessionDuration: 3600
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Federated: !If
+                - CreateGitHubOidcProvider
+                - !Ref GitHubOidcProvider
+                - !Ref ExistingGitHubOidcProviderArn
+            Action: sts:AssumeRoleWithWebIdentity
+            Condition:
+              StringEquals:
+                token.actions.githubusercontent.com:aud: sts.amazonaws.com
+                token.actions.githubusercontent.com:sub: !Sub 'repo:${GitHubOrganization}/${GitHubRepository}:environment:${EnvironmentName}'
+      Policies:
+        - PolicyName: DeployThroughSystemsManager
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Sid: StartDeployment
+                Effect: Allow
+                Action: ssm:SendCommand
+                Resource:
+                  - !Sub 'arn:${AWS::Partition}:ssm:${AWS::Region}::document/AWS-RunShellScript'
+                  - !Sub 'arn:${AWS::Partition}:ec2:${AWS::Region}:${AWS::AccountId}:instance/${InstanceId}'
+              - Sid: ReadDeploymentResult
+                Effect: Allow
+                Action:
+                  - ssm:GetCommandInvocation
+                  - ssm:ListCommandInvocations
+                Resource: '*'
+        - PolicyName: MigrationSafetySnapshot
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Sid: CreateStagingSnapshot
+                Effect: Allow
+                Action: rds:CreateDBSnapshot
+                Resource:
+                  - !Sub 'arn:${AWS::Partition}:rds:${AWS::Region}:${AWS::AccountId}:db:${DatabaseInstanceIdentifier}'
+                  - !Sub 'arn:${AWS::Partition}:rds:${AWS::Region}:${AWS::AccountId}:snapshot:foodmind-staging-*'
+              - Sid: ReadSnapshotStatus
+                Effect: Allow
+                Action: rds:DescribeDBSnapshots
+                Resource: '*'
+      Tags:
+        - Key: Application
+          Value: foodmind
+        - Key: Environment
+          Value: !Ref EnvironmentName
+
+  GitHubStagingPublishRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: foodmind-github-staging-publish
+      MaxSessionDuration: 3600
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Federated: !If
+                - CreateGitHubOidcProvider
+                - !Ref GitHubOidcProvider
+                - !Ref ExistingGitHubOidcProviderArn
+            Action: sts:AssumeRoleWithWebIdentity
+            Condition:
+              StringEquals:
+                token.actions.githubusercontent.com:aud: sts.amazonaws.com
+                token.actions.githubusercontent.com:sub: !Sub 'repo:${GitHubOrganization}/${GitHubRepository}:environment:${EnvironmentName}'
+      Policies:
+        - PolicyName: PublishFoodMindImages
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Sid: AuthenticateToEcr
+                Effect: Allow
+                Action: ecr:GetAuthorizationToken
+                Resource: '*'
+              - Sid: PushAndResolveFoodMindImages
+                Effect: Allow
+                Action:
+                  - ecr:BatchCheckLayerAvailability
+                  - ecr:BatchGetImage
+                  - ecr:CompleteLayerUpload
+                  - ecr:DescribeImages
+                  - ecr:GetDownloadUrlForLayer
+                  - ecr:InitiateLayerUpload
+                  - ecr:PutImage
+                  - ecr:UploadLayerPart
+                Resource:
+                  - !GetAtt ModelPackageRepository.Arn
+                  - !GetAtt InferenceRepository.Arn
+                  - !GetAtt RecommendationRepository.Arn
+                  - !GetAtt CookingRepository.Arn
+                  - !GetAtt ChatbotRepository.Arn
+                  - !GetAtt BackendRepository.Arn
+                  - !GetAtt WebRepository.Arn
+      Tags:
+        - Key: Application
+          Value: foodmind
+        - Key: Environment
+          Value: !Ref EnvironmentName
+
+  InstanceEcrPullPolicy:
+    Type: AWS::IAM::Policy
+    Properties:
+      PolicyName: FoodMindStagingEcrPull
+      Roles:
+        - !Ref InstanceRoleName
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Sid: AuthenticateToEcr
+            Effect: Allow
+            Action: ecr:GetAuthorizationToken
+            Resource: '*'
+          - Sid: PullFoodMindImages
+            Effect: Allow
+            Action:
+              - ecr:BatchCheckLayerAvailability
+              - ecr:BatchGetImage
+              - ecr:GetDownloadUrlForLayer
+            Resource:
+              - !GetAtt ModelPackageRepository.Arn
+              - !GetAtt InferenceRepository.Arn
+              - !GetAtt RecommendationRepository.Arn
+              - !GetAtt CookingRepository.Arn
+              - !GetAtt ChatbotRepository.Arn
+              - !GetAtt BackendRepository.Arn
+              - !GetAtt WebRepository.Arn
+
+Outputs:
+  PublishRoleArn:
+    Description: Store this ARN as the staging AWS_PUBLISH_ROLE_ARN environment variable.
+    Value: !GetAtt GitHubStagingPublishRole.Arn
+  DeployRoleArn:
+    Description: Store this ARN as the staging AWS_DEPLOY_ROLE_ARN environment variable.
+    Value: !GetAtt GitHubStagingDeployRole.Arn
+  OidcProviderArn:
+    Value: !If
+      - CreateGitHubOidcProvider
+      - !Ref GitHubOidcProvider
+      - !Ref ExistingGitHubOidcProviderArn
+  EcrRegistry:
+    Value: !Sub '${AWS::AccountId}.dkr.ecr.${AWS::Region}.amazonaws.com'
+  ModelPackageRepositoryUri:
+    Value: !GetAtt ModelPackageRepository.RepositoryUri
+  InferenceRepositoryUri:
+    Value: !GetAtt InferenceRepository.RepositoryUri
+  RecommendationRepositoryUri:
+    Value: !GetAtt RecommendationRepository.RepositoryUri
+  CookingRepositoryUri:
+    Value: !GetAtt CookingRepository.RepositoryUri
+  ChatbotRepositoryUri:
+    Value: !GetAtt ChatbotRepository.RepositoryUri
+  BackendRepositoryUri:
+    Value: !GetAtt BackendRepository.RepositoryUri
+  WebRepositoryUri:
+    Value: !GetAtt WebRepository.RepositoryUri

@@ -1,15 +1,20 @@
 name: Compose integration
 
 on:
-  # Local/offline stack only. AWS deployment files are deliberately excluded.
   pull_request:
   push:
     branches: [master]
     paths:
       - '.github/workflows/compose.yml'
+      - '.github/workflows/deploy-staging.yml'
+      - '.github/workflows/publish-staging.yml'
       - '.env.example'
+      - '.env.aws.example'
       - '.gitmodules'
+      - 'cloudformation.github-actions-cd.yaml'
       - 'compose.yaml'
+      - 'compose.aws-demo.yaml'
+      - 'releases/**'
       - 'scripts/**'
       - 'services/**'
   workflow_dispatch:
@@ -63,6 +68,13 @@ jobs:
         run: docker compose --env-file .env.example config --format json | python3 scripts/check-compose-policy.py compose.yaml -
       - name: Scan tracked files for common credential forms
         run: python3 scripts/check-secrets.py
+      - name: Validate staging delivery contract
+        run: |
+          set -euo pipefail
+          bash -n scripts/check-aws-env.sh scripts/verify-aws-demo.sh scripts/cd/*.sh
+          docker compose --env-file .env.aws.example -f compose.aws-demo.yaml config --quiet
+          ./scripts/cd/validate-release-manifest.sh releases/staging.example.json 076648863731 ap-southeast-1
+          ./scripts/cd/validate-release-source.sh releases/staging-source.json
 
   stack-smoke:
     needs: [changes, validate]

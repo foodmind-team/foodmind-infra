@@ -1,0 +1,97 @@
+name: Publish staging images
+
+on:
+  workflow_run:
+    workflows: [Compose integration]
+    types: [completed]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  id-token: write
+
+concurrency:
+  group: foodmind-staging-publish
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    if: >-
+      (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/master') ||
+      (github.event.workflow_run.conclusion == 'success' &&
+       github.event.workflow_run.event == 'push' &&
+       github.event.workflow_run.head_branch == 'master' &&
+       github.event.workflow_run.head_repository.full_name == github.repository)
+    environment: staging
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - name: Resolve tested infrastructure revision
+        id: revision
+        env:
+          WORKFLOW_RUN_SHA: ${{ github.event.workflow_run.head_sha }}
+          DISPATCH_SHA: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+          if [[ "${GITHUB_EVENT_NAME}" == "workflow_run" ]]; then
+            revision="${WORKFLOW_RUN_SHA}"
+          else
+            revision="${DISPATCH_SHA}"
+          fi
+          [[ "${revision}" =~ ^[0-9a-f]{40}$ ]]
+          echo "sha=${revision}" >> "${GITHUB_OUTPUT}"
+
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: ${{ steps.revision.outputs.sha }}
+          path: infra
+          submodules: recursive
+
+      - name: Validate release source
+        id: source
+        working-directory: infra
+        run: |
+          set -euo pipefail
+          ./scripts/cd/validate-release-source.sh releases/staging-source.json
+          echo "web_revision=$(jq -r '.web_revision' releases/staging-source.json)" >> "${GITHUB_OUTPUT}"
+
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          repository: foodmind-team/foodmind-web
+          ref: ${{ steps.source.outputs.web_revision }}
+          path: foodmind-web
+
+      - name: Configure short-lived AWS publisher credentials
+        uses: aws-actions/configure-aws-credentials@acca2b1b2070338fb9fd1ca27ecee81d687e58e5 # v6.1.2
+        with:
+          role-to-assume: ${{ vars.AWS_PUBLISH_ROLE_ARN }}
+          role-session-name: publish-${{ github.run_id }}
+          aws-region: ${{ vars.AWS_REGION }}
+          allowed-account-ids: ${{ vars.AWS_ACCOUNT_ID }}
+
+      - name: Build and publish tested images
+        working-directory: infra
+        env:
+          AWS_ACCOUNT_ID: ${{ vars.AWS_ACCOUNT_ID }}
+          AWS_REGION: ${{ vars.AWS_REGION }}
+          INFRA_REVISION: ${{ steps.revision.outputs.sha }}
+        run: ./scripts/cd/publish-staging-images.sh releases/staging-source.json ../foodmind-web release-manifest.json
+
+      - name: Upload immutable release manifest
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: staging-release
+          path: infra/release-manifest.json
+          if-no-files-found: error
+          retention-days: 30
+
+      - name: Record publication summary
+        working-directory: infra
+        run: |
+          {
+            echo "### FoodMind staging image publication"
+            echo
+            echo "- Release: \`$(jq -r '.release_id' release-manifest.json)\`"
+            echo "- Infra revision: \`${{ steps.revision.outputs.sha }}\`"
+            echo "- Seven images published by immutable ECR digest."
+          } >> "${GITHUB_STEP_SUMMARY}"

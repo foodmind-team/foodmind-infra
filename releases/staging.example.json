@@ -1,0 +1,21 @@
+{
+  "schema_version": 1,
+  "release_id": "staging-20260813-001",
+  "database_migrations": false,
+  "images": {
+    "model-package": "076648863731.dkr.ecr.ap-southeast-1.amazonaws.com/foodmind/model-package@sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    "inference": "076648863731.dkr.ecr.ap-southeast-1.amazonaws.com/foodmind/inference@sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+    "recommendation": "076648863731.dkr.ecr.ap-southeast-1.amazonaws.com/foodmind/recommendation@sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+    "cooking": "076648863731.dkr.ecr.ap-southeast-1.amazonaws.com/foodmind/cooking@sha256:dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+    "chatbot": "076648863731.dkr.ecr.ap-southeast-1.amazonaws.com/foodmind/chatbot@sha256:eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+    "backend": "076648863731.dkr.ecr.ap-southeast-1.amazonaws.com/foodmind/backend@sha256:ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+    "web": "076648863731.dkr.ecr.ap-southeast-1.amazonaws.com/foodmind/web@sha256:1111111111111111111111111111111111111111111111111111111111111111"
+  },
+  "source_revisions": {
+    "infra": "1111111111111111111111111111111111111111",
+    "ml": "2222222222222222222222222222222222222222",
+    "intelligence": "3333333333333333333333333333333333333333",
+    "backend": "4444444444444444444444444444444444444444",
+    "web": "5555555555555555555555555555555555555555"
+  }
+}
