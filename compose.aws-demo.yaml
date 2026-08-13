@@ -91,6 +91,18 @@ services:
     mem_limit: 768m
     cpus: 1.0
 
+  cooking-data-init:
+    image: foodmind/cooking:${FOODMIND_IMAGE_TAG}
+    user: "0:0"
+    entrypoint: ["/bin/sh", "-c"]
+    command: ["chown -R agent:agent /app/data"]
+    volumes:
+      - cooking-data:/app/data
+    restart: "no"
+    security_opt: [no-new-privileges:true]
+    mem_limit: 64m
+    cpus: 0.25
+
   cooking:
     <<: *runtime-service
     build:
@@ -107,6 +119,9 @@ services:
       DEEPSEEK_API_KEY: ${DEEPSEEK_API_KEY:-}
     volumes:
       - cooking-data:/app/data
+    depends_on:
+      cooking-data-init:
+        condition: service_completed_successfully
     healthcheck:
       test: ["CMD", "/app/.venv/bin/python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8003/health/ready', timeout=2)"]
       interval: 10s
