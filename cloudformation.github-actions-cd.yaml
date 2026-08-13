@@ -22,10 +22,20 @@ Parameters:
     Type: String
     Default: foodmind-team
     AllowedPattern: '^[A-Za-z0-9_.-]+$'
+  GitHubOrganizationId:
+    Type: String
+    Default: '309771149'
+    AllowedPattern: '^[0-9]+$'
+    Description: Immutable GitHub owner ID used in OIDC subject claims.
   GitHubRepository:
     Type: String
     Default: foodmind-infra
     AllowedPattern: '^[A-Za-z0-9_.-]+$'
+  GitHubRepositoryId:
+    Type: String
+    Default: '1331807030'
+    AllowedPattern: '^[0-9]+$'
+    Description: Immutable GitHub repository ID used in OIDC subject claims.
   EnvironmentName:
     Type: String
     Default: staging
@@ -206,7 +216,7 @@ Resources:
             Condition:
               StringEquals:
                 token.actions.githubusercontent.com:aud: sts.amazonaws.com
-                token.actions.githubusercontent.com:sub: !Sub 'repo:${GitHubOrganization}/${GitHubRepository}:environment:${EnvironmentName}'
+                token.actions.githubusercontent.com:sub: !Sub 'repo:${GitHubOrganization}@${GitHubOrganizationId}/${GitHubRepository}@${GitHubRepositoryId}:environment:${EnvironmentName}'
       Policies:
         - PolicyName: DeployThroughSystemsManager
           PolicyDocument:
@@ -262,7 +272,7 @@ Resources:
             Condition:
               StringEquals:
                 token.actions.githubusercontent.com:aud: sts.amazonaws.com
-                token.actions.githubusercontent.com:sub: !Sub 'repo:${GitHubOrganization}/${GitHubRepository}:environment:${EnvironmentName}'
+                token.actions.githubusercontent.com:sub: !Sub 'repo:${GitHubOrganization}@${GitHubOrganizationId}/${GitHubRepository}@${GitHubRepositoryId}:environment:${EnvironmentName}'
       Policies:
         - PolicyName: PublishFoodMindImages
           PolicyDocument:
