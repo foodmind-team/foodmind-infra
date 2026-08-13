@@ -85,9 +85,17 @@ aws cloudformation deploy \
     InstanceRoleName=foodmind-demo-ec2-role \
     DatabaseInstanceIdentifier=foodmind-demo-db \
     GitHubOrganization=foodmind-team \
+    GitHubOrganizationId=309771149 \
     GitHubRepository=foodmind-infra \
+    GitHubRepositoryId=1331807030 \
     EnvironmentName=staging
 ```
+
+The numeric owner and repository IDs bind AWS trust to GitHub's immutable OIDC
+subject format. GitHub uses this format for repositories created after
+2026-07-15, so both names and IDs must match the repository issuing the token.
+Retrieve them with `gh api repos/OWNER/REPO --jq '{repo_id:.id,owner_id:.owner.id}'`
+when adapting this stack to another repository.
 
 If the account gains a shared GitHub OIDC provider before this stack is created,
 pass its ARN through `ExistingGitHubOidcProviderArn` to avoid creating a
