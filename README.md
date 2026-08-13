@@ -11,6 +11,8 @@ An isolated single-EC2 AWS demonstration topology is also available through
 private RDS PostgreSQL and optional S3 instead of the local PostgreSQL/MinIO
 services, and publishes only ports 80/443. It is intentionally not the
 production ECS architecture. See [AWS demo deployment](docs/aws-demo-deployment.md).
+The digest-pinned staging release path is documented in
+[staging continuous delivery](docs/staging-continuous-delivery.md).
 
 ## Quick start
 
