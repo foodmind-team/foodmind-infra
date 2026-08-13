@@ -240,7 +240,9 @@ Resources:
             Statement:
               - Sid: CreateStagingSnapshot
                 Effect: Allow
-                Action: rds:CreateDBSnapshot
+                Action:
+                  - rds:CreateDBSnapshot
+                  - rds:AddTagsToResource
                 Resource:
                   - !Sub 'arn:${AWS::Partition}:rds:${AWS::Region}:${AWS::AccountId}:db:${DatabaseInstanceIdentifier}'
                   - !Sub 'arn:${AWS::Partition}:rds:${AWS::Region}:${AWS::AccountId}:snapshot:foodmind-staging-*'
