@@ -91,6 +91,18 @@ services:
     mem_limit: 768m
     cpus: 1.0
 
+  cooking-data-init:
+    image: foodmind/cooking:${FOODMIND_IMAGE_TAG}
+    user: "0:0"
+    entrypoint: ["/bin/sh", "-c"]
+    command: ["chown -R agent:agent /app/data"]
+    volumes:
+      - cooking-data:/app/data
+    restart: "no"
+    security_opt: [no-new-privileges:true]
+    mem_limit: 64m
+    cpus: 0.25
+
   cooking:
     <<: *runtime-service
     build:
@@ -101,10 +113,30 @@ services:
       COOKING_PLAN_INTERNAL_SERVICE_TOKEN: ${COOKING_AGENT_SERVICE_TOKEN}
       COOKING_PLAN_SAFETY_POLICY_REGION: SG
       COOKING_PLAN_TASK_API_ENABLED: "true"
-      COOKING_PLAN_CHECKPOINT_ENABLED: "false"
+      COOKING_PLAN_TASK_SSE_ENABLED: "true"
+      COOKING_PLAN_CHECKPOINT_ENABLED: "true"
+      COOKING_PLAN_CHECKPOINT_BACKEND: sqlite
+      COOKING_PLAN_CHECKPOINT_SQLITE_PATH: data/checkpoints.sqlite
       COOKING_PLAN_LOG_FORMAT: json
       COOKING_PLAN_LLM_ENABLED: ${FOODMIND_LLM_ENABLED:-false}
+      COOKING_PLAN_LLM_BASE_URL: ${COOKING_PLAN_LLM_BASE_URL:-https://api.deepseek.com}
+      COOKING_PLAN_LLM_MODEL: ${COOKING_PLAN_LLM_MODEL:-deepseek-v4-flash}
+      COOKING_PLAN_LLM_TIMEOUT_SECONDS: ${COOKING_PLAN_LLM_TIMEOUT_SECONDS:-90}
+      COOKING_PLAN_LLM_MAX_RETRIES: ${COOKING_PLAN_LLM_MAX_RETRIES:-2}
+      COOKING_PLAN_LLM_MAX_OUTPUT_TOKENS: ${COOKING_PLAN_LLM_MAX_OUTPUT_TOKENS:-8192}
+      COOKING_PLAN_LLM_MAX_CONCURRENCY: ${COOKING_PLAN_LLM_MAX_CONCURRENCY:-4}
+      COOKING_PLAN_LLM_CONNECTION_POOL_SIZE: ${COOKING_PLAN_LLM_CONNECTION_POOL_SIZE:-10}
+      COOKING_PLAN_LLM_OVERALL_TIMEOUT_SECONDS: ${COOKING_PLAN_LLM_OVERALL_TIMEOUT_SECONDS:-480}
+      COOKING_PLAN_EXPLANATION_ENABLED: "true"
+      COOKING_PLAN_WEB_RESEARCH_ENABLED: "true"
+      COOKING_PLAN_CACHE_ENABLED: "true"
+      COOKING_PLAN_MAX_RECIPE_COUNT: ${COOKING_PLAN_MAX_RECIPE_COUNT:-10}
       DEEPSEEK_API_KEY: ${DEEPSEEK_API_KEY:-}
+    volumes:
+      - cooking-data:/app/data
+    depends_on:
+      cooking-data-init:
+        condition: service_completed_successfully
     healthcheck:
       test: ["CMD", "/app/.venv/bin/python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8003/health/ready', timeout=2)"]
       interval: 10s
@@ -248,5 +280,6 @@ networks:
 
 volumes:
   model-package:
+  cooking-data:
   caddy-data:
   caddy-config:
