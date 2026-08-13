@@ -1,3 +1,6 @@
 .env
 .env.local
+.env.aws
+.env.aws.*
+!.env.aws.example
 .DS_Store

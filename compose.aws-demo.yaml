@@ -1,0 +1,252 @@
+name: foodmind-aws-demo
+
+x-default-logging: &default-logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "5"
+
+x-runtime-service: &runtime-service
+  init: true
+  restart: unless-stopped
+  logging: *default-logging
+
+services:
+  model-package:
+    build:
+      context: ./services/ml
+      dockerfile: ../../docker/model-package.Dockerfile
+    image: foodmind/model-package:${FOODMIND_IMAGE_TAG}
+    command: ["--output", "/model-package"]
+    restart: "no"
+    volumes:
+      - model-package:/model-package
+    networks: [runtime]
+    logging: *default-logging
+    mem_limit: 768m
+    cpus: 1.0
+
+  inference:
+    <<: *runtime-service
+    build:
+      context: ./services/intelligence/inference-service
+    image: foodmind/inference:${FOODMIND_IMAGE_TAG}
+    environment:
+      # The checked-in model manifest is approved only for local/demo use.
+      INFERENCE_APP_ENV: local
+      INFERENCE_INTERNAL_SERVICE_TOKEN: ${INFERENCE_INTERNAL_SERVICE_TOKEN}
+      INFERENCE_MODEL_PACKAGE_DIR: /model-package
+    volumes:
+      - model-package:/model-package:ro
+    depends_on:
+      model-package:
+        condition: service_completed_successfully
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8002/health/ready', timeout=2)"]
+      interval: 10s
+      timeout: 3s
+      retries: 12
+      start_period: 5s
+    networks: [runtime]
+    read_only: true
+    tmpfs:
+      - /tmp:size=64m,mode=1777
+    security_opt: [no-new-privileges:true]
+    cap_drop: [ALL]
+    mem_limit: 768m
+    cpus: 1.0
+
+  recommendation:
+    <<: *runtime-service
+    build:
+      context: ./services/intelligence/agent-service/app/agents/recommendation
+      args:
+        SOURCE_REVISION: ${FOODMIND_IMAGE_TAG}
+    image: foodmind/recommendation:${FOODMIND_IMAGE_TAG}
+    environment:
+      # Production mode rejects plain HTTP inference. This single-host demo
+      # keeps the service on an unexposed Docker network and records the gap.
+      RECOMMENDATION_AGENT_APP_ENV: local
+      RECOMMENDATION_AGENT_INTERNAL_SERVICE_TOKEN: ${RECOMMENDATION_AGENT_SERVICE_TOKEN}
+      RECOMMENDATION_AGENT_SUPPORTED_CONTRACT_VERSIONS: recommendation-agent-v2
+      RECOMMENDATION_AGENT_INFERENCE_BASE_URL: http://inference:8002
+      RECOMMENDATION_AGENT_INFERENCE_SERVICE_TOKEN: ${INFERENCE_INTERNAL_SERVICE_TOKEN}
+      RECOMMENDATION_AGENT_LLM_ENABLED: ${FOODMIND_LLM_ENABLED:-false}
+      DEEPSEEK_API_KEY: ${DEEPSEEK_API_KEY:-}
+    depends_on:
+      inference:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8004/health/ready', timeout=2)"]
+      interval: 10s
+      timeout: 3s
+      retries: 12
+      start_period: 5s
+    networks: [runtime]
+    read_only: true
+    tmpfs:
+      - /tmp:size=64m,mode=1777
+    security_opt: [no-new-privileges:true]
+    cap_drop: [ALL]
+    mem_limit: 768m
+    cpus: 1.0
+
+  cooking:
+    <<: *runtime-service
+    build:
+      context: ./services/intelligence/agent-service/app/agents/cooking
+    image: foodmind/cooking:${FOODMIND_IMAGE_TAG}
+    environment:
+      COOKING_PLAN_ENVIRONMENT: staging
+      COOKING_PLAN_INTERNAL_SERVICE_TOKEN: ${COOKING_AGENT_SERVICE_TOKEN}
+      COOKING_PLAN_SAFETY_POLICY_REGION: SG
+      COOKING_PLAN_TASK_API_ENABLED: "true"
+      COOKING_PLAN_CHECKPOINT_ENABLED: "false"
+      COOKING_PLAN_LOG_FORMAT: json
+      COOKING_PLAN_LLM_ENABLED: ${FOODMIND_LLM_ENABLED:-false}
+      DEEPSEEK_API_KEY: ${DEEPSEEK_API_KEY:-}
+    healthcheck:
+      test: ["CMD", "/app/.venv/bin/python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8003/health/ready', timeout=2)"]
+      interval: 10s
+      timeout: 3s
+      retries: 12
+      start_period: 10s
+    networks: [runtime]
+    security_opt: [no-new-privileges:true]
+    cap_drop: [ALL]
+    mem_limit: 2g
+    cpus: 2.0
+    stop_grace_period: 30s
+
+  chatbot:
+    <<: *runtime-service
+    build:
+      context: ./services/intelligence/agent-service/app/agents/chatbot
+    image: foodmind/chatbot:${FOODMIND_IMAGE_TAG}
+    environment:
+      CHAT_AGENT_ENVIRONMENT: staging
+      CHAT_AGENT_INTERNAL_SERVICE_TOKEN: ${CHAT_AGENT_SERVICE_TOKEN}
+      CHAT_AGENT_BACKEND_BASE_URL: http://backend:8080
+      CHAT_AGENT_BACKEND_SERVICE_TOKEN: ${INTERNAL_SERVICE_TOKEN}
+      CHAT_AGENT_LLM_ENABLED: ${FOODMIND_LLM_ENABLED:-false}
+      DEEPSEEK_API_KEY: ${DEEPSEEK_API_KEY:-}
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8001/health/ready', timeout=2)"]
+      interval: 10s
+      timeout: 3s
+      retries: 12
+      start_period: 5s
+    networks: [runtime]
+    security_opt: [no-new-privileges:true]
+    cap_drop: [ALL]
+    mem_limit: 768m
+    cpus: 1.0
+
+  backend:
+    <<: *runtime-service
+    build:
+      context: ./services/backend
+    image: foodmind/backend:${FOODMIND_IMAGE_TAG}
+    environment:
+      # The docker profile is retained for the AWS demo because the repository
+      # production profile contract is not yet aligned with its implementation.
+      SPRING_PROFILES_ACTIVE: docker
+      SERVER_FORWARD_HEADERS_STRATEGY: framework
+      DB_URL: jdbc:postgresql://${DB_HOST}:${DB_PORT:-5432}/${DB_NAME}?sslmode=${DB_SSL_MODE:-require}
+      DB_USERNAME: ${DB_USERNAME}
+      DB_PASSWORD: ${DB_PASSWORD}
+      DB_POOL_MAX_SIZE: ${DB_POOL_MAX_SIZE:-8}
+      DB_POOL_MIN_IDLE: ${DB_POOL_MIN_IDLE:-1}
+      JWT_SECRET: ${JWT_SECRET}
+      JWT_ISSUER: ${JWT_ISSUER:-foodmind-aws-demo}
+      JWT_AUDIENCE: ${JWT_AUDIENCE:-foodmind-clients}
+      DELEGATION_JWT_ISSUER: ${DELEGATION_JWT_ISSUER:-foodmind-backend-aws-demo}
+      INTERNAL_SERVICE_TOKEN: ${INTERNAL_SERVICE_TOKEN}
+      WEB_COOKIE_SECURE: "true"
+      WEB_ALLOWED_ORIGINS: https://${FOODMIND_DOMAIN}
+      FOODMIND_SECURITY_WEB_COOKIE_SECURE: "true"
+      FOODMIND_SECURITY_WEB_ALLOWED_ORIGINS: https://${FOODMIND_DOMAIN}
+      RECOMMENDATION_AGENT_BASE_URL: http://recommendation:8004
+      RECOMMENDATION_AGENT_SERVICE_TOKEN: ${RECOMMENDATION_AGENT_SERVICE_TOKEN}
+      RECOMMENDATION_AGENT_CONTRACT_VERSION: recommendation-agent-v2
+      COOKING_AGENT_BASE_URL: http://cooking:8003
+      COOKING_AGENT_SERVICE_TOKEN: ${COOKING_AGENT_SERVICE_TOKEN}
+      COOKING_TASK_POLL_ENABLED: "true"
+      CHAT_AGENT_BASE_URL: http://chatbot:8001
+      CHAT_AGENT_SERVICE_TOKEN: ${CHAT_AGENT_SERVICE_TOKEN}
+      MEDIA_ENABLED: ${MEDIA_ENABLED:-false}
+      MEDIA_S3_BUCKET: ${MEDIA_S3_BUCKET:-}
+      MEDIA_S3_REGION: ${AWS_REGION}
+      MEDIA_S3_ENDPOINT: ""
+      MEDIA_S3_ACCESS_KEY: ""
+      MEDIA_S3_SECRET_KEY: ""
+      JAVA_TOOL_OPTIONS: -XX:MaxRAMPercentage=${BACKEND_JAVA_MAX_RAM_PERCENTAGE:-70.0}
+    depends_on:
+      recommendation:
+        condition: service_healthy
+      cooking:
+        condition: service_healthy
+      chatbot:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "--fail", "--silent", "http://127.0.0.1:8080/actuator/health/readiness"]
+      interval: 10s
+      timeout: 3s
+      retries: 18
+      start_period: 30s
+    networks: [edge, runtime]
+    security_opt: [no-new-privileges:true]
+    cap_drop: [ALL]
+    mem_limit: 1536m
+    cpus: 1.5
+    stop_grace_period: 30s
+
+  web:
+    <<: *runtime-service
+    build:
+      context: ${FOODMIND_WEB_CONTEXT:-../foodmind-web}
+    image: foodmind/web:${FOODMIND_IMAGE_TAG}
+    depends_on:
+      backend:
+        condition: service_healthy
+    networks: [edge]
+    security_opt: [no-new-privileges:true]
+    mem_limit: 256m
+    cpus: 0.5
+
+  caddy:
+    <<: *runtime-service
+    image: ${CADDY_IMAGE:-caddy:2.10.2-alpine@sha256:4c6e91c6ed0e2fa03efd5b44747b625fec79bc9cd06ac5235a779726618e530d}
+    environment:
+      FOODMIND_DOMAIN: ${FOODMIND_DOMAIN}
+      FOODMIND_ACME_EMAIL: ${FOODMIND_ACME_EMAIL}
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+      - caddy-config:/config
+    depends_on:
+      backend:
+        condition: service_healthy
+      web:
+        condition: service_healthy
+    networks: [edge]
+    security_opt: [no-new-privileges:true]
+    cap_drop: [ALL]
+    cap_add: [NET_BIND_SERVICE]
+    mem_limit: 256m
+    cpus: 0.5
+
+networks:
+  edge:
+    name: foodmind-aws-edge
+  runtime:
+    name: foodmind-aws-runtime
+
+volumes:
+  model-package:
+  caddy-data:
+  caddy-config:
