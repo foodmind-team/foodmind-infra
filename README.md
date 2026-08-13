@@ -37,7 +37,7 @@ FOODMIND_LLM_ENABLED=true
 DEEPSEEK_API_KEY=your-key
 ```
 
-Chatbot defaults to `deepseek-v4-flash` in non-thinking mode with temperature
+Chatbot defaults to `deepseek-v4-pro` in non-thinking mode with temperature
 `1.3`, allowing varied conversational answers while Backend-authorised facts
 remain fixed grounding constraints. These Chatbot-specific values can be
 overridden with `CHAT_AGENT_LLM_MODEL`, `CHAT_AGENT_LLM_TEMPERATURE`, and
