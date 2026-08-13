@@ -6,6 +6,12 @@ starts the complete backend stack with one Compose project. The Web repository
 is deliberately **not** included or built here; run it from `foodmind-web` and
 point it at `http://localhost:8080`.
 
+An isolated single-EC2 AWS demonstration topology is also available through
+`compose.aws-demo.yaml`. It adds the sibling Web checkout and Caddy, uses
+private RDS PostgreSQL and optional S3 instead of the local PostgreSQL/MinIO
+services, and publishes only ports 80/443. It is intentionally not the
+production ECS architecture. See [AWS demo deployment](docs/aws-demo-deployment.md).
+
 ## Quick start
 
 Clone with the pinned source repositories, then create your local environment:
