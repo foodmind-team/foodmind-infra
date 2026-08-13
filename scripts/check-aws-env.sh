@@ -4,11 +4,17 @@ set -euo pipefail
 SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd -- "${SCRIPT_DIR}/.." && pwd)"
 ENV_FILE="${1:-${REPO_ROOT}/.env.aws}"
+VALIDATION_MODE="${2:-source}"
 
 fail() {
   printf 'ERROR: %s\n' "$1" >&2
   exit 1
 }
+
+case "${VALIDATION_MODE}" in
+  source|runtime) ;;
+  *) fail "validation mode must be source or runtime" ;;
+esac
 
 if [[ ! -f "${ENV_FILE}" ]]; then
   fail "environment file not found: ${ENV_FILE}"
@@ -143,29 +149,31 @@ if [[ "${llm_enabled:-false}" == "true" && -z "$(env_value DEEPSEEK_API_KEY)" ]]
   fail "DEEPSEEK_API_KEY is required when FOODMIND_LLM_ENABLED=true"
 fi
 
-web_context="$(env_value FOODMIND_WEB_CONTEXT)"
-if [[ "${web_context}" == /* ]]; then
-  web_path="${web_context}"
-else
-  web_path="${REPO_ROOT}/${web_context}"
-fi
-if [[ ! -f "${web_path}/Dockerfile" || ! -f "${web_path}/package-lock.json" ]]; then
-  fail "FOODMIND_WEB_CONTEXT does not point to a complete foodmind-web checkout: ${web_path}"
-fi
-
-required_source_files=(
-  services/backend/Dockerfile
-  services/intelligence/inference-service/Dockerfile
-  services/intelligence/agent-service/app/agents/chatbot/Dockerfile
-  services/intelligence/agent-service/app/agents/cooking/Dockerfile
-  services/intelligence/agent-service/app/agents/recommendation/Dockerfile
-  services/ml/scripts/build_runtime_package.py
-  services/ml/artifacts/candidate/hybrid_lr_model.npz
-)
-for path in "${required_source_files[@]}"; do
-  if [[ ! -f "${REPO_ROOT}/${path}" ]]; then
-    fail "required submodule file is missing: ${path}; run git submodule update --init --recursive"
+if [[ "${VALIDATION_MODE}" == "source" ]]; then
+  web_context="$(env_value FOODMIND_WEB_CONTEXT)"
+  if [[ "${web_context}" == /* ]]; then
+    web_path="${web_context}"
+  else
+    web_path="${REPO_ROOT}/${web_context}"
   fi
-done
+  if [[ ! -f "${web_path}/Dockerfile" || ! -f "${web_path}/package-lock.json" ]]; then
+    fail "FOODMIND_WEB_CONTEXT does not point to a complete foodmind-web checkout: ${web_path}"
+  fi
 
-printf 'PASS: AWS demo environment and source checkout passed static validation.\n'
+  required_source_files=(
+    services/backend/Dockerfile
+    services/intelligence/inference-service/Dockerfile
+    services/intelligence/agent-service/app/agents/chatbot/Dockerfile
+    services/intelligence/agent-service/app/agents/cooking/Dockerfile
+    services/intelligence/agent-service/app/agents/recommendation/Dockerfile
+    services/ml/scripts/build_runtime_package.py
+    services/ml/artifacts/candidate/hybrid_lr_model.npz
+  )
+  for path in "${required_source_files[@]}"; do
+    if [[ ! -f "${REPO_ROOT}/${path}" ]]; then
+      fail "required submodule file is missing: ${path}; run git submodule update --init --recursive"
+    fi
+  done
+fi
+
+printf 'PASS: AWS demo environment passed %s validation.\n' "${VALIDATION_MODE}"

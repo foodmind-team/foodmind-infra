@@ -4,11 +4,21 @@ set -euo pipefail
 SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd -- "${SCRIPT_DIR}/.." && pwd)"
 ENV_FILE="${1:-${REPO_ROOT}/.env.aws}"
+RELEASE_ENV_FILE="${2:-}"
 COMPOSE_FILE="${REPO_ROOT}/compose.aws-demo.yaml"
 
-"${SCRIPT_DIR}/check-aws-env.sh" "${ENV_FILE}"
+if [[ -n "${RELEASE_ENV_FILE}" ]]; then
+  [[ -f "${RELEASE_ENV_FILE}" ]] || {
+    printf 'ERROR: release environment file not found: %s\n' "${RELEASE_ENV_FILE}" >&2
+    exit 1
+  }
+  "${SCRIPT_DIR}/check-aws-env.sh" "${ENV_FILE}" runtime
+  compose=(docker compose --env-file "${ENV_FILE}" --env-file "${RELEASE_ENV_FILE}" -f "${COMPOSE_FILE}")
+else
+  "${SCRIPT_DIR}/check-aws-env.sh" "${ENV_FILE}"
+  compose=(docker compose --env-file "${ENV_FILE}" -f "${COMPOSE_FILE}")
+fi
 
-compose=(docker compose --env-file "${ENV_FILE}" -f "${COMPOSE_FILE}")
 expected_running=(inference recommendation cooking chatbot backend web caddy)
 running_services="$("${compose[@]}" ps --status running --services)"
 
