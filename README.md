@@ -108,6 +108,22 @@ docker compose down --volumes
 the three Agents, and Backend readiness. `model-package` and `minio-init` are
 one-shot jobs: they must complete successfully before their consumers start.
 
+For the recommendation-diversity release, run the end-to-end acceptance. It
+uses `.env` when present and otherwise the local-only `.env.example` defaults:
+
+```powershell
+./scripts/verify-recommendation-diversity.ps1
+```
+
+The check binds the committed seed to ML commit `6b5b417`, regenerates and
+verifies its input hashes, requires exactly 6 local places and 96 offerings,
+uses the real `hybrid-ranking-v1` runtime, checks top-three category/cuisine
+diversity, and proves that `DO_NOT_RECOMMEND` excludes the same meal/place from
+future sessions without mutating the saved historical session.
+The exact Backend, Intelligence, Web, Android, and ML revisions are recorded in
+`releases/recommendation-diversity-stable-20260814.json`; Web and Android remain
+separate repositories rather than local Compose submodules.
+
 ## Source pinning and updates
 
 Submodules make a stack reproducible: the parent commit records every exact

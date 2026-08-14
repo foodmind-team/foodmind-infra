@@ -1,0 +1,24 @@
+{
+  "schemaVersion": "foodmind-recommendation-diversity-release-v1",
+  "branch": "feature/recommendation-diversity-20260814",
+  "tag": "recommendation-diversity-stable-20260814",
+  "sourceRevisions": {
+    "backend": "1301ccbe278ba78915330063ef155df9a686d3e4",
+    "intelligence": "277ba35d935f6ea95c9a6243a8de33ca83caa710",
+    "web": "d12954e7dc06d5694e8e952e5f5e26f767f6d272",
+    "android": "aa81883f73e0382d1a68e0665ec6a67209d24c5b",
+    "ml": "6b5b417411e04f5388d0eab39e1a57dee9d92676"
+  },
+  "localSeed": {
+    "manifest": "services/backend/src/main/resources/db/local/ml-recommendation-seed-manifest.json",
+    "restaurants": 6,
+    "offerings": 96,
+    "generatedSqlSha256": "1fd9f6ff4b1bed9138c69badc168b32b7e41b33d58d65b7accb85c4621ae5558"
+  },
+  "runtime": {
+    "modelVersion": "hybrid-ranking-v1",
+    "diversityPolicyVersion": "recommendation-diversity-v2",
+    "userCfAvailable": false,
+    "itemCfAvailable": false
+  }
+}
