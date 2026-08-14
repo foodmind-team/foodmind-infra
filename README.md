@@ -37,6 +37,13 @@ FOODMIND_LLM_ENABLED=true
 DEEPSEEK_API_KEY=your-key
 ```
 
+Chatbot defaults to `deepseek-v4-pro` in non-thinking mode with temperature
+`1.0` and an 800-token output cap, allowing varied conversational answers
+without long-form drift while Backend-authorised facts remain fixed grounding
+constraints. These Chatbot-specific values can be overridden with
+`CHAT_AGENT_LLM_MODEL`, `CHAT_AGENT_LLM_TEMPERATURE`,
+`CHAT_AGENT_LLM_MAX_OUTPUT_TOKENS`, and `CHAT_AGENT_LLM_THINKING_ENABLED`.
+
 ```powershell
 docker compose up -d --force-recreate recommendation cooking chatbot
 ```
@@ -72,6 +79,9 @@ diagnostics rather than exposing internal endpoints.
   the supplied local values consistent; do not put production secrets here.
 - `FOODMIND_LLM_ENABLED` and `DEEPSEEK_API_KEY`: optional DeepSeek enhancement.
   A blank key with LLM disabled is a supported offline development mode.
+- `CHAT_AGENT_LLM_*`: Chatbot model and sampling controls. The defaults favour
+  natural, non-template conversation; readiness reports the active safe
+  metadata without exposing the key.
 - `MEDIA_ENABLED`: defaults to `false`. MinIO and its bucket still start, but
   browser-accessible presigned uploads require a browser-reachable S3 endpoint
   and are intentionally not enabled by this internal-only default.
