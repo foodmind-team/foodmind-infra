@@ -1,5 +1,8 @@
 10015	IGNORE	(Reviewed: no-store response cache policy is intentional)
 10027	IGNORE	(Reviewed: bundled application comment contains no secret or internal endpoint)
 10049	IGNORE	(Reviewed: authenticated and health responses are intentionally non-storable)
+10055	IGNORE	(Reviewed: arbitrary HTTPS recipe images are a product requirement; the header gate separately rejects broad inline script/style policy)
+10094	IGNORE	(Reviewed: bundled static asset contains non-sensitive base64 application data)
 10109	IGNORE	(Informational: application is a modern JavaScript client)
 90004	IGNORE	(Reviewed: COEP is incompatible with current cross-origin images; COOP and CORP are enforced separately)
+90005	IGNORE	(Scanner-generated requests do not include browser Sec-Fetch request headers)

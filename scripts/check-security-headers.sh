@@ -47,11 +47,26 @@ require_header() {
   printf 'PASS: %s\n' "${header_name}"
 }
 
+reject_header_fragment() {
+  local header_name="$1"
+  local rejected_fragment="$2"
+  local value
+  value="$(header_value "${header_name}")"
+  if [[ "${value}" == *"${rejected_fragment}"* ]]; then
+    printf 'ERROR: %s contains rejected policy: %s\n' "${header_name}" "${rejected_fragment}" >&2
+    return 1
+  fi
+  printf 'PASS: %s rejects broad policy fragment\n' "${header_name}"
+}
+
 require_header 'Strict-Transport-Security' 'max-age=31536000'
 require_header 'Content-Security-Policy' "default-src 'self'"
 require_header 'Content-Security-Policy' "connect-src 'self' https://*.amazonaws.com"
 require_header 'Content-Security-Policy' "frame-ancestors 'none'"
 require_header 'Content-Security-Policy' "object-src 'none'"
+require_header 'Content-Security-Policy' "style-src 'self'"
+require_header 'Content-Security-Policy' "style-src-attr 'unsafe-inline'"
+reject_header_fragment 'Content-Security-Policy' "style-src 'self' 'unsafe-inline'"
 require_header 'X-Content-Type-Options' 'nosniff'
 require_header 'X-Frame-Options' 'DENY'
 require_header 'Referrer-Policy' 'strict-origin-when-cross-origin'
