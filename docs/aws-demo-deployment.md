@@ -43,6 +43,9 @@ No Backend, database, MinIO, Agent, or Inference port is published by
 - The manual bootstrap path builds images on EC2. The continuous-delivery path
   pulls immutable images but still cannot provide zero-downtime deployment on a
   single EC2 instance.
+- RDS automated backups are retained for seven days and deletion protection is
+  enabled. The demo remains Single-AZ, so it does not provide an automatic
+  standby failover or a production availability commitment.
 
 These boundaries must remain visible in demo evidence. They are not production
 approvals.
@@ -65,8 +68,9 @@ Create an EC2 security group:
 | Outbound | PostgreSQL 5432 | RDS security group |
 
 Create an RDS security group with inbound TCP 5432 from the EC2 security group
-only. RDS must not be publicly accessible. Enable automated backups and choose a
-retention period appropriate for the demo evidence requirements.
+only. RDS must not be publicly accessible. The checked-in stack retains
+automated backups for seven days, enables deletion protection, and creates a
+final snapshot if CloudFormation replaces or removes the database resource.
 
 ### EC2
 
@@ -94,6 +98,9 @@ must install the RDS CA bundle and move to certificate-verifying TLS.
 
 Flyway runs during Backend startup. Take an RDS snapshot before deploying a
 release containing new migrations. Never use Flyway clean against this database.
+Deleting the demo stack requires an explicit, reviewed step to disable RDS
+deletion protection first; preserve the final snapshot until its retention owner
+approves removal.
 
 ### S3 media
 

@@ -7,6 +7,7 @@ MANIFEST_FILE="${1:-}"
 ENV_FILE="${2:-/opt/foodmind/foodmind-infra/.env.aws}"
 STATE_DIR="${FOODMIND_CD_STATE_DIR:-/opt/foodmind/cd-state}"
 COMPOSE_FILE="${REPO_ROOT}/compose.aws-demo.yaml"
+CLOUDWATCH_COMPOSE_FILE="${REPO_ROOT}/compose.aws-cloudwatch-logs.yaml"
 LOCK_FILE="${STATE_DIR}/deploy.lock"
 
 fail() {
@@ -47,6 +48,11 @@ env_value() {
 }
 
 aws_region="$(env_value AWS_REGION)"
+compose_files=(-f "${COMPOSE_FILE}")
+if [[ "$(env_value FOODMIND_CLOUDWATCH_LOGS_ENABLED)" == "true" ]]; then
+  compose_files+=(-f "${CLOUDWATCH_COMPOSE_FILE}")
+  printf 'CloudWatch container logging is enabled.\n'
+fi
 account_id="$(aws sts get-caller-identity --query Account --output text --region "${aws_region}" --no-cli-pager)"
 "${SCRIPT_DIR}/validate-release-manifest.sh" "${MANIFEST_FILE}" "${account_id}" "${aws_region}"
 
@@ -76,7 +82,7 @@ if [[ -f "${current_manifest}" ]]; then
 elif [[ ! -f "${rollback_env}" ]]; then
   umask 077
   : >"${rollback_env}"
-  baseline_compose=(docker compose --env-file "${ENV_FILE}" -f "${COMPOSE_FILE}")
+  baseline_compose=(docker compose --env-file "${ENV_FILE}" "${compose_files[@]}")
   for service in model-package inference recommendation cooking chatbot backend web; do
     container_id="$("${baseline_compose[@]}" ps --all --quiet "${service}")"
     [[ -n "${container_id}" ]] || fail "cannot capture first-deploy rollback image for ${service}"
@@ -97,7 +103,7 @@ elif [[ ! -f "${rollback_env}" ]]; then
 fi
 
 "${SCRIPT_DIR}/render-release-env.sh" "${MANIFEST_FILE}" "${release_env}.candidate"
-candidate_compose=(docker compose --env-file "${ENV_FILE}" --env-file "${release_env}.candidate" -f "${COMPOSE_FILE}")
+candidate_compose=(docker compose --env-file "${ENV_FILE}" --env-file "${release_env}.candidate" "${compose_files[@]}")
 
 printf 'Pulling immutable images for release %s...\n' "${release_id}"
 "${candidate_compose[@]}" pull model-package inference recommendation cooking chatbot backend web
@@ -105,7 +111,7 @@ printf 'Pulling immutable images for release %s...\n' "${release_id}"
 
 rollback() {
   printf 'Deployment failed; restoring the captured previous image set.\n' >&2
-  rollback_compose=(docker compose --env-file "${ENV_FILE}" --env-file "${rollback_env}" -f "${COMPOSE_FILE}")
+  rollback_compose=(docker compose --env-file "${ENV_FILE}" --env-file "${rollback_env}" "${compose_files[@]}")
   "${rollback_compose[@]}" up -d --wait --wait-timeout 300 --remove-orphans --no-build
   "${REPO_ROOT}/scripts/verify-aws-demo.sh" "${ENV_FILE}" "${rollback_env}"
   rm -f "${release_env}.candidate"
