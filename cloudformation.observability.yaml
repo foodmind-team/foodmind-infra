@@ -1,0 +1,146 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: Optional FoodMind staging container logs and baseline operational alarms.
+
+Parameters:
+  AppRoleName:
+    Type: String
+    Description: Existing EC2 instance role that runs the FoodMind containers.
+    Default: foodmind-demo-ec2-role
+  AppInstanceId:
+    Type: AWS::EC2::Instance::Id
+    Description: Existing FoodMind staging EC2 instance ID.
+  DatabaseInstanceIdentifier:
+    Type: String
+    Description: Existing FoodMind staging RDS DB instance identifier.
+    Default: foodmind-demo-db
+  AlertEmail:
+    Type: String
+    Description: Operational email that will confirm the SNS subscription.
+    AllowedPattern: '^[^@\s]+@[^@\s]+\.[^@\s]+$'
+  ContainerLogGroupName:
+    Type: String
+    Default: /foodmind/staging/containers
+    AllowedPattern: '^[.\-_/#A-Za-z0-9]+$'
+  LogRetentionDays:
+    Type: Number
+    Default: 7
+    AllowedValues: [1, 3, 5, 7, 14, 30]
+
+Resources:
+  ContainerLogGroup:
+    Type: AWS::Logs::LogGroup
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
+    Properties:
+      LogGroupName: !Ref ContainerLogGroupName
+      RetentionInDays: !Ref LogRetentionDays
+
+  ContainerLoggingPolicy:
+    Type: AWS::IAM::Policy
+    Properties:
+      PolicyName: FoodMindStagingContainerLogs
+      Roles:
+        - !Ref AppRoleName
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Sid: WriteContainerLogs
+            Effect: Allow
+            Action:
+              - logs:CreateLogStream
+              - logs:PutLogEvents
+            Resource: !Sub '${ContainerLogGroup.Arn}:*'
+
+  AlarmTopic:
+    Type: AWS::SNS::Topic
+    Properties:
+      DisplayName: FoodMind staging alarms
+
+  AlarmEmailSubscription:
+    Type: AWS::SNS::Subscription
+    Properties:
+      Protocol: email
+      Endpoint: !Ref AlertEmail
+      TopicArn: !Ref AlarmTopic
+
+  Ec2StatusCheckAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmDescription: FoodMind EC2 failed an instance or system status check.
+      Namespace: AWS/EC2
+      MetricName: StatusCheckFailed
+      Dimensions:
+        - Name: InstanceId
+          Value: !Ref AppInstanceId
+      Statistic: Maximum
+      Period: 60
+      EvaluationPeriods: 2
+      DatapointsToAlarm: 2
+      Threshold: 1
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+      TreatMissingData: breaching
+      AlarmActions: [!Ref AlarmTopic]
+      OKActions: [!Ref AlarmTopic]
+
+  Ec2HighCpuAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmDescription: FoodMind EC2 CPU remained above 85 percent for 15 minutes.
+      Namespace: AWS/EC2
+      MetricName: CPUUtilization
+      Dimensions:
+        - Name: InstanceId
+          Value: !Ref AppInstanceId
+      Statistic: Average
+      Period: 300
+      EvaluationPeriods: 3
+      DatapointsToAlarm: 3
+      Threshold: 85
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+      TreatMissingData: breaching
+      AlarmActions: [!Ref AlarmTopic]
+      OKActions: [!Ref AlarmTopic]
+
+  RdsHighCpuAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmDescription: FoodMind RDS CPU remained above 80 percent for 15 minutes.
+      Namespace: AWS/RDS
+      MetricName: CPUUtilization
+      Dimensions:
+        - Name: DBInstanceIdentifier
+          Value: !Ref DatabaseInstanceIdentifier
+      Statistic: Average
+      Period: 300
+      EvaluationPeriods: 3
+      DatapointsToAlarm: 3
+      Threshold: 80
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+      TreatMissingData: breaching
+      AlarmActions: [!Ref AlarmTopic]
+      OKActions: [!Ref AlarmTopic]
+
+  RdsLowStorageAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmDescription: FoodMind RDS free storage remained below 5 GiB for 10 minutes.
+      Namespace: AWS/RDS
+      MetricName: FreeStorageSpace
+      Dimensions:
+        - Name: DBInstanceIdentifier
+          Value: !Ref DatabaseInstanceIdentifier
+      Statistic: Minimum
+      Period: 300
+      EvaluationPeriods: 2
+      DatapointsToAlarm: 2
+      Threshold: 5368709120
+      ComparisonOperator: LessThanOrEqualToThreshold
+      TreatMissingData: breaching
+      AlarmActions: [!Ref AlarmTopic]
+      OKActions: [!Ref AlarmTopic]
+
+Outputs:
+  ContainerLogGroup:
+    Value: !Ref ContainerLogGroup
+  AlarmTopicArn:
+    Value: !Ref AlarmTopic
