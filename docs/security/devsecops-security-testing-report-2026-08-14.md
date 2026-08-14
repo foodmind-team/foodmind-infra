@@ -1,7 +1,9 @@
 # FoodMind DevSecOps security testing report
 
-**Assessment date:** 2026-08-14  
-**Environment:** GitHub repositories and AWS staging (`ap-southeast-1`)  
+**Assessment date:** 2026-08-14
+
+**Environment:** GitHub repositories and AWS staging (`ap-southeast-1`)
+
 **Scope:** source, dependencies, secrets, container images, delivery controls, public HTTP response policy, and baseline runtime configuration.
 
 ## Executive result

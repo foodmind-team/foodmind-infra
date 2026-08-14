@@ -48,4 +48,3 @@ Do not place credentials, bearer tokens, cookies, presigned URLs, personal data,
 ## Rollback
 
 Set `FOODMIND_CLOUDWATCH_LOGS_ENABLED=false` and redeploy before deleting the observability stack. Stack deletion removes the IAM policy, alarms, topic, and subscription. The log group is retained to avoid accidental evidence loss and must be deleted separately only after an explicit retention decision.
-

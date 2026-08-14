@@ -114,7 +114,6 @@ Ensure that your web server, application server, load balancer, etc. is properly
 #### WASC Id: 15
 
 #### Source ID: 3
-
 ### [ Cross-Origin-Embedder-Policy Header Missing or Invalid ](https://www.zaproxy.org/docs/alerts/90004/)
 
 
@@ -656,5 +655,4 @@ Ensure that Sec-Fetch-User header is included in user initiated requests.
 #### WASC Id: 9
 
 #### Source ID: 3
-
 
