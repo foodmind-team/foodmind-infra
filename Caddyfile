@@ -16,7 +16,7 @@
 	}
 
 	header {
-		Content-Security-Policy "default-src 'self'; script-src 'self'; connect-src 'self' https://*.amazonaws.com; img-src 'self' data: blob: https:; style-src 'self' 'unsafe-inline'; font-src 'self'; object-src 'none'; base-uri 'self'; frame-ancestors 'none'; form-action 'self'; worker-src 'self' blob:"
+		Content-Security-Policy "default-src 'self'; script-src 'self'; connect-src 'self' https://*.amazonaws.com; img-src 'self' data: blob: https:; style-src 'self'; style-src-attr 'unsafe-inline'; font-src 'self'; object-src 'none'; base-uri 'self'; frame-ancestors 'none'; form-action 'self'; worker-src 'self' blob:"
 		Strict-Transport-Security "max-age=31536000"
 		X-Content-Type-Options "nosniff"
 		X-Frame-Options "DENY"
