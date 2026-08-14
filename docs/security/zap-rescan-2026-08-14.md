@@ -166,7 +166,6 @@ If possible, ensure that the end user uses a standards-compliant and modern web 
 #### WASC Id: 14
 
 #### Source ID: 3
-
 ### [ Base64 Disclosure ](https://www.zaproxy.org/docs/alerts/10094/)
 
 
@@ -655,4 +654,3 @@ Ensure that Sec-Fetch-User header is included in user initiated requests.
 #### WASC Id: 9
 
 #### Source ID: 3
-
