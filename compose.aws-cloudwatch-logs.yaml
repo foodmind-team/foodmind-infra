@@ -1,0 +1,40 @@
+name: foodmind-aws-demo
+
+x-cloudwatch-logging: &cloudwatch-logging
+  driver: awslogs
+  options:
+    awslogs-region: ${AWS_REGION}
+    awslogs-group: ${CLOUDWATCH_LOG_GROUP:-/foodmind/staging/containers}
+    tag: '{{.Name}}'
+    awslogs-create-group: 'false'
+    mode: non-blocking
+    max-buffer-size: 4m
+
+services:
+  model-package:
+    logging: !override
+      <<: *cloudwatch-logging
+  inference:
+    logging: !override
+      <<: *cloudwatch-logging
+  recommendation:
+    logging: !override
+      <<: *cloudwatch-logging
+  cooking-data-init:
+    logging: !override
+      <<: *cloudwatch-logging
+  cooking:
+    logging: !override
+      <<: *cloudwatch-logging
+  chatbot:
+    logging: !override
+      <<: *cloudwatch-logging
+  backend:
+    logging: !override
+      <<: *cloudwatch-logging
+  web:
+    logging: !override
+      <<: *cloudwatch-logging
+  caddy:
+    logging: !override
+      <<: *cloudwatch-logging

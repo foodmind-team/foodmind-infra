@@ -8,12 +8,18 @@ on:
       - '.github/workflows/compose.yml'
       - '.github/workflows/deploy-staging.yml'
       - '.github/workflows/publish-staging.yml'
+      - '.github/workflows/security-dast.yml'
       - '.env.example'
       - '.env.aws.example'
       - '.gitmodules'
+      - '.zap/**'
+      - 'Caddyfile'
+      - 'cloudformation.aws-demo.yaml'
       - 'cloudformation.github-actions-cd.yaml'
+      - 'cloudformation.observability.yaml'
       - 'compose.yaml'
       - 'compose.aws-demo.yaml'
+      - 'compose.aws-cloudwatch-logs.yaml'
       - 'releases/**'
       - 'scripts/**'
       - 'services/**'
@@ -49,7 +55,7 @@ jobs:
             echo "compose=true" >> "$GITHUB_OUTPUT"
             exit 0
           fi
-          if grep -Eq '(^\.github/workflows/compose\.yml$|^\.env\.example$|^\.gitmodules$|^compose\.yaml$|^scripts/|^services/)' <<< "$changed_files"; then
+          if grep -Eq '(^\.github/workflows/(compose|deploy-staging|publish-staging|security-dast)\.yml$|^\.env(\.aws)?\.example$|^\.gitmodules$|^\.zap/|^Caddyfile$|^cloudformation\.(aws-demo|github-actions-cd|observability)\.yaml$|^compose(\.aws-demo|\.aws-cloudwatch-logs)?\.yaml$|^releases/|^scripts/|^services/)' <<< "$changed_files"; then
             echo "compose=true" >> "$GITHUB_OUTPUT"
           else
             echo "compose=false" >> "$GITHUB_OUTPUT"
@@ -62,6 +68,10 @@ jobs:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
           submodules: recursive
+      - uses: astral-sh/setup-uv@20cfd1bf945f4377ade1205e4dbc17946fc9a30d # v10.0.1
+        with:
+          python-version: '3.13'
+          enable-cache: true
       - name: Render Compose configuration
         run: docker compose --env-file .env.example config --quiet
       - name: Validate Compose safety policy
@@ -71,8 +81,15 @@ jobs:
       - name: Validate staging delivery contract
         run: |
           set -euo pipefail
-          bash -n scripts/check-aws-env.sh scripts/verify-aws-demo.sh scripts/cd/*.sh
+          bash -n scripts/check-aws-env.sh scripts/check-security-headers.sh scripts/verify-aws-demo.sh scripts/cd/*.sh
           docker compose --env-file .env.aws.example -f compose.aws-demo.yaml config --quiet
+          docker compose --env-file .env.aws.example -f compose.aws-demo.yaml -f compose.aws-cloudwatch-logs.yaml config --quiet
+          docker compose --env-file .env.aws.example -f compose.aws-demo.yaml -f compose.aws-cloudwatch-logs.yaml config --format json |
+            jq -e '.services | to_entries | all(.value.logging.driver == "awslogs")'
+          uvx --from cfn-lint==1.55.1 cfn-lint \
+            cloudformation.aws-demo.yaml \
+            cloudformation.github-actions-cd.yaml \
+            cloudformation.observability.yaml
           ./scripts/cd/validate-release-manifest.sh releases/staging.example.json 076648863731 ap-southeast-1
           ./scripts/cd/validate-release-source.sh releases/staging-source.json
 
