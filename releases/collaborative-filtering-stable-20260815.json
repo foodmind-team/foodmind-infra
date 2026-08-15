@@ -1,0 +1,36 @@
+{
+  "schemaVersion": "foodmind-collaborative-filtering-release-v1",
+  "branch": "feature/collaborative-filtering-20260815",
+  "tag": "collaborative-filtering-stable-20260815",
+  "baseStableTag": "recommendation-diversity-stable-20260814",
+  "sourceRevisions": {
+    "backend": "1038e745d18ff69a8802702e00c57b6d430668f8",
+    "intelligence": "92c4e3ecb7cdd7abd8df0e901e9616f06a5ed613",
+    "web": "d12954e7dc06d5694e8e952e5f5e26f767f6d272",
+    "android": "aa81883f73e0382d1a68e0665ec6a67209d24c5b",
+    "ml": "04b7f57669fdf8c3c6d522d7f3f507d1b820f0f0"
+  },
+  "runtime": {
+    "modelVersion": "hybrid-ranking-v1",
+    "modelPackageVersion": "recommendation-package-v1",
+    "inferenceContractVersion": "recommendation-inference-v1",
+    "userCf": {
+      "enabledOnlyWithVerifiedIndex": true,
+      "minimumNeighborSupport": 3
+    },
+    "itemCf": {
+      "enabledOnlyWithVerifiedIndex": true,
+      "minimumSupportingItems": 2
+    },
+    "coldStartWithoutIndex": {
+      "userCfAvailable": false,
+      "itemCfAvailable": false
+    }
+  },
+  "dataGovernance": {
+    "menuSeedEnablesCf": false,
+    "interactionSource": "Backend foodmind-training-snapshot-v2",
+    "pseudonymisation": "hmac-sha256-v1",
+    "positiveOnly": true
+  }
+}
