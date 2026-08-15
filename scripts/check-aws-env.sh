@@ -149,6 +149,18 @@ if [[ "${llm_enabled:-false}" == "true" && -z "$(env_value DEEPSEEK_API_KEY)" ]]
   fail "DEEPSEEK_API_KEY is required when FOODMIND_LLM_ENABLED=true"
 fi
 
+cloudwatch_logs_enabled="$(env_value FOODMIND_CLOUDWATCH_LOGS_ENABLED)"
+case "${cloudwatch_logs_enabled:-false}" in
+  true|false) ;;
+  *) fail "FOODMIND_CLOUDWATCH_LOGS_ENABLED must be true or false" ;;
+esac
+if [[ "${cloudwatch_logs_enabled:-false}" == "true" ]]; then
+  cloudwatch_log_group="$(env_value CLOUDWATCH_LOG_GROUP)"
+  if [[ ! "${cloudwatch_log_group}" =~ ^/[A-Za-z0-9._/#-]+$ ]]; then
+    fail "CLOUDWATCH_LOG_GROUP must be an absolute CloudWatch Logs group name"
+  fi
+fi
+
 if [[ "${VALIDATION_MODE}" == "source" ]]; then
   web_context="$(env_value FOODMIND_WEB_CONTEXT)"
   if [[ "${web_context}" == /* ]]; then

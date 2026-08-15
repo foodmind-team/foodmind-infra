@@ -58,6 +58,7 @@ if [[ "${SKIP_PUBLIC_CHECK:-false}" != "true" ]]; then
   curl --fail --silent --show-error \
     --retry 6 --retry-delay 5 --retry-all-errors \
     "https://${domain}/healthz" >/dev/null
+  "${SCRIPT_DIR}/check-security-headers.sh" "https://${domain}/healthz"
 fi
 
-printf 'PASS: containers, private readiness endpoints, Web health, and public HTTPS passed.\n'
+printf 'PASS: containers, private readiness endpoints, Web health, public HTTPS, and security headers passed.\n'

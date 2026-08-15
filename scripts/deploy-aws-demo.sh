@@ -5,6 +5,7 @@ SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd -- "${SCRIPT_DIR}/.." && pwd)"
 ENV_FILE="${1:-${REPO_ROOT}/.env.aws}"
 COMPOSE_FILE="${REPO_ROOT}/compose.aws-demo.yaml"
+CLOUDWATCH_COMPOSE_FILE="${REPO_ROOT}/compose.aws-cloudwatch-logs.yaml"
 
 if [[ -f "${ENV_FILE}" && "${ENV_FILE}" != /* ]]; then
   ENV_FILE="$(cd -- "$(dirname -- "${ENV_FILE}")" && pwd)/$(basename -- "${ENV_FILE}")"
@@ -27,7 +28,19 @@ git submodule update --init --recursive
 
 "${SCRIPT_DIR}/check-aws-env.sh" "${ENV_FILE}"
 
-compose=(docker compose --env-file "${ENV_FILE}" -f "${COMPOSE_FILE}")
+cloudwatch_logs_enabled="$(sed -n 's/^FOODMIND_CLOUDWATCH_LOGS_ENABLED=//p' "${ENV_FILE}" | tail -n 1)"
+cloudwatch_logs_enabled="${cloudwatch_logs_enabled%$'\r'}"
+cloudwatch_logs_enabled="${cloudwatch_logs_enabled%\"}"
+cloudwatch_logs_enabled="${cloudwatch_logs_enabled#\"}"
+cloudwatch_logs_enabled="${cloudwatch_logs_enabled%\'}"
+cloudwatch_logs_enabled="${cloudwatch_logs_enabled#\'}"
+
+compose_files=(-f "${COMPOSE_FILE}")
+if [[ "${cloudwatch_logs_enabled:-false}" == "true" ]]; then
+  compose_files+=(-f "${CLOUDWATCH_COMPOSE_FILE}")
+  printf 'CloudWatch container logging is enabled.\n'
+fi
+compose=(docker compose --env-file "${ENV_FILE}" "${compose_files[@]}")
 
 printf 'Validating rendered Compose configuration...\n'
 "${compose[@]}" config --quiet

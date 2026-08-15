@@ -132,8 +132,8 @@ Resources:
 
   Database:
     Type: AWS::RDS::DBInstance
-    DeletionPolicy: Delete
-    UpdateReplacePolicy: Delete
+    DeletionPolicy: Snapshot
+    UpdateReplacePolicy: Snapshot
     Properties:
       DBInstanceIdentifier: foodmind-demo-db
       Engine: postgres
@@ -147,10 +147,10 @@ Resources:
       ManageMasterUserPassword: true
       PubliclyAccessible: false
       MultiAZ: false
-      BackupRetentionPeriod: 1
+      BackupRetentionPeriod: 7
       CopyTagsToSnapshot: true
       AutoMinorVersionUpgrade: true
-      DeletionProtection: false
+      DeletionProtection: true
       DBSubnetGroupName: !Ref DatabaseSubnetGroup
       VPCSecurityGroups:
         - !Ref DatabaseSecurityGroup
@@ -259,7 +259,7 @@ Resources:
         HttpPutResponseHopLimit: 2
       Monitoring: false
       UserData:
-        Fn::Base64: !Sub |
+        Fn::Base64: |
           #!/bin/bash
           set -euxo pipefail
           exec > >(tee /var/log/foodmind-bootstrap.log | logger -t foodmind-bootstrap -s 2>/dev/console) 2>&1

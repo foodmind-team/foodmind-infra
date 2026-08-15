@@ -4,11 +4,11 @@
   "tag": "collaborative-filtering-stable-20260815",
   "baseStableTag": "recommendation-diversity-stable-20260814",
   "sourceRevisions": {
-    "backend": "1038e745d18ff69a8802702e00c57b6d430668f8",
-    "intelligence": "92c4e3ecb7cdd7abd8df0e901e9616f06a5ed613",
-    "web": "d12954e7dc06d5694e8e952e5f5e26f767f6d272",
-    "android": "aa81883f73e0382d1a68e0665ec6a67209d24c5b",
-    "ml": "04b7f57669fdf8c3c6d522d7f3f507d1b820f0f0"
+    "backend": "dbc8a2959f399c7e3088c8be4cc48b902553a0c6",
+    "intelligence": "b8f4a74a4da1f096eed0aec7f5aa086d3be58956",
+    "web": "30918219c148d70aa716aac50b9214c2eabb13be",
+    "android": "ca21a9907e457b98501f754b59c89c7dd82c46ba",
+    "ml": "c2364ca44f7ae243e329381f6bb1a49d0e0dd188"
   },
   "runtime": {
     "modelVersion": "hybrid-ranking-v1",
