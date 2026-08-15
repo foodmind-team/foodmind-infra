@@ -1,0 +1,40 @@
+{
+  "schemaVersion": "foodmind-user-centered-recommendation-showcase-v1",
+  "branch": "feature/user-centered-recommendation-showcase-20260815",
+  "tag": "user-centered-recommendation-showcase-stable-20260815",
+  "baseStableTags": {
+    "backend": "collaborative-filtering-stable-20260815",
+    "web": "recommendation-diversity-stable-20260814",
+    "android": "recommendation-diversity-stable-20260814",
+    "infra": "collaborative-filtering-stable-20260815"
+  },
+  "sourceRevisions": {
+    "backend": "11c7b30e6573c3f9fd82c9a5670cfd7e2a7d1d9b",
+    "intelligence": "92c4e3ecb7cdd7abd8df0e901e9616f06a5ed613",
+    "web": "eb3abfcbbed08a2627dd61c9464c91af87072af1",
+    "android": "3083e01b2f06fe30db7e28274ef2c813d6f3ebea",
+    "docs": "6586f1f9a00d69cc01401dd744d2a27797c6168d",
+    "ml": "04b7f57669fdf8c3c6d522d7f3f507d1b820f0f0"
+  },
+  "runtime": {
+    "modelVersion": "hybrid-ranking-v1",
+    "decisionProfileContract": "recommendation-decision-profile-v1",
+    "verifiedModes": [
+      "DEFAULT",
+      "CONSTRAINT_FOCUSED",
+      "GROUP_GUIDED"
+    ],
+    "groupEvidenceCount": 2,
+    "constraintSafetyFallbackObserved": true,
+    "verificationReport": "services/docs/testing/user-centered-recommendations/README.md"
+  },
+  "crossDeviceAcceptance": {
+    "source": "Android debug APK on emulator",
+    "target": "Web Preferences refresh",
+    "field": "spiceTolerance",
+    "before": 5,
+    "after": 4,
+    "allergenRetained": "SESAME:SEVERE",
+    "evidence": "services/docs/testing/user-centered-recommendations"
+  }
+}
