@@ -68,6 +68,14 @@ Agents are intentionally not published to the host. Backend is their only
 public integration boundary. Use `docker compose exec <service> ...` for
 diagnostics rather than exposing internal endpoints.
 
+UserCF and ItemCF are opt-in offline artifacts. To enable them locally, place a
+verified, HMAC-pseudonymised index under the read-only `services/ml` mount and
+set `FOODMIND_COLLABORATIVE_INDEX_PATH` to its container path (for example,
+`/ml/data/local/collaborative-index.json`). The model-package job verifies and
+copies it into the immutable shared package. Leaving the variable empty is the
+normal and safe cold-start mode: inference returns unavailable CF signals, not
+made-up scores. Never generate an index from the 96-menu local seed.
+
 ## Environment contract
 
 `.env.example` lists every variable used by Compose. The important groups are:
@@ -107,6 +115,22 @@ docker compose down --volumes
 `docker compose up --build -d --wait` waits for PostgreSQL, MinIO, Inference,
 the three Agents, and Backend readiness. `model-package` and `minio-init` are
 one-shot jobs: they must complete successfully before their consumers start.
+
+For the recommendation-diversity release, run the end-to-end acceptance. It
+uses `.env` when present and otherwise the local-only `.env.example` defaults:
+
+```powershell
+./scripts/verify-recommendation-diversity.ps1
+```
+
+The check binds the committed seed to ML commit `6b5b417`, regenerates and
+verifies its input hashes, requires exactly 6 local places and 96 offerings,
+uses the real `hybrid-ranking-v1` runtime, checks top-three category/cuisine
+diversity, and proves that `DO_NOT_RECOMMEND` excludes the same meal/place from
+future sessions without mutating the saved historical session.
+The exact Backend, Intelligence, Web, Android, and ML revisions are recorded in
+`releases/recommendation-diversity-stable-20260814.json`; Web and Android remain
+separate repositories rather than local Compose submodules.
 
 ## Source pinning and updates
 

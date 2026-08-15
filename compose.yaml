@@ -60,7 +60,16 @@ services:
     command:
       - sh
       - -ec
-      - pip install --no-cache-dir numpy==2.3.2 && python scripts/build_runtime_package.py --output /model-package
+      - |
+        pip install --no-cache-dir numpy==2.3.2
+        if [ -n "$$FOODMIND_COLLABORATIVE_INDEX_PATH" ]; then
+          test -f "$$FOODMIND_COLLABORATIVE_INDEX_PATH"
+          python scripts/build_runtime_package.py --output /model-package --collaborative-index "$$FOODMIND_COLLABORATIVE_INDEX_PATH"
+        else
+          python scripts/build_runtime_package.py --output /model-package
+        fi
+    environment:
+      FOODMIND_COLLABORATIVE_INDEX_PATH: ${FOODMIND_COLLABORATIVE_INDEX_PATH:-}
     volumes:
       - ./services/ml:/ml:ro
       - model-package:/model-package
