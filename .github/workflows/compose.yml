@@ -90,6 +90,10 @@ jobs:
             cloudformation.aws-demo.yaml \
             cloudformation.github-actions-cd.yaml \
             cloudformation.observability.yaml
+          uv run --with PyYAML==6.0.3 python scripts/check-cloudformation-policy.py \
+            cloudformation.aws-demo.yaml \
+            cloudformation.github-actions-cd.yaml \
+            cloudformation.observability.yaml
           ./scripts/cd/validate-release-manifest.sh releases/staging.example.json 076648863731 ap-southeast-1
           ./scripts/cd/validate-release-source.sh releases/staging-source.json
 
