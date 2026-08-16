@@ -77,6 +77,15 @@ jobs:
           INFRA_REVISION: ${{ steps.revision.outputs.sha }}
         run: ./scripts/cd/publish-staging-images.sh releases/staging-source.json ../foodmind-web release-manifest.json
 
+      - name: Upload SBOM and container scan evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: staging-image-security-${{ steps.revision.outputs.sha }}
+          path: infra/release-security-evidence/
+          if-no-files-found: warn
+          retention-days: 30
+
       - name: Upload immutable release manifest
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:

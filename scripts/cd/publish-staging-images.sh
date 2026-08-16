@@ -6,6 +6,8 @@ REPO_ROOT="$(cd -- "${SCRIPT_DIR}/../.." && pwd)"
 SOURCE_FILE="${1:-${REPO_ROOT}/releases/staging-source.json}"
 WEB_CHECKOUT="${2:-${REPO_ROOT}/../foodmind-web}"
 OUTPUT_FILE="${3:-${REPO_ROOT}/release-manifest.json}"
+SECURITY_EVIDENCE_DIR="${4:-${REPO_ROOT}/release-security-evidence}"
+TRIVY_IMAGE="aquasec/trivy:0.74.0@sha256:ee940acbf1f58ebadb42d01434ce4609530bf1b52536afbd1eee66cd7123c5c9"
 
 fail() {
   printf 'ERROR: %s\n' "$1" >&2
@@ -49,14 +51,17 @@ registry="${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com"
 image_tag="${INFRA_REVISION:0:12}-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
 release_id="staging-${image_tag}"
 docker_config_dir="$(mktemp -d)"
+trivy_cache_dir="$(mktemp -d)"
 manifest_tmp="$(mktemp)"
 cleanup() {
   rm -rf -- "${docker_config_dir}"
+  rm -rf -- "${trivy_cache_dir}"
   rm -f -- "${manifest_tmp}"
 }
 trap cleanup EXIT
 chmod 700 "${docker_config_dir}"
 export DOCKER_CONFIG="${docker_config_dir}"
+mkdir -p "${SECURITY_EVIDENCE_DIR}"
 
 aws ecr get-login-password --region "${AWS_REGION}" --no-cli-pager | \
   docker login --username AWS --password-stdin "${registry}" >/dev/null
@@ -73,6 +78,31 @@ build_and_publish() {
 
   printf 'Building %s from %s...\n' "${image_name}" "${context}"
   docker build --pull --file "${dockerfile}" --tag "${image_ref}" "$@" "${context}"
+
+  printf 'Generating SBOM for %s...\n' "${image_name}"
+  docker run --rm \
+    -v /var/run/docker.sock:/var/run/docker.sock \
+    -v "${trivy_cache_dir}:/root/.cache/trivy" \
+    -v "${SECURITY_EVIDENCE_DIR}:/evidence" \
+    "${TRIVY_IMAGE}" image \
+    --format cyclonedx \
+    --output "/evidence/${image_name}-sbom.cdx.json" \
+    "${image_ref}"
+
+  printf 'Scanning %s for fixable Medium-or-higher vulnerabilities...\n' "${image_name}"
+  docker run --rm \
+    -v /var/run/docker.sock:/var/run/docker.sock \
+    -v "${trivy_cache_dir}:/root/.cache/trivy" \
+    -v "${SECURITY_EVIDENCE_DIR}:/evidence" \
+    "${TRIVY_IMAGE}" image \
+    --scanners vuln \
+    --ignore-unfixed \
+    --severity MEDIUM,HIGH,CRITICAL \
+    --exit-code 1 \
+    --format json \
+    --output "/evidence/${image_name}-trivy.json" \
+    "${image_ref}"
+
   docker push "${image_ref}"
 
   for _ in {1..12}; do
