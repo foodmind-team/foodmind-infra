@@ -72,6 +72,7 @@ require_header 'X-Frame-Options' 'DENY'
 require_header 'Referrer-Policy' 'strict-origin-when-cross-origin'
 require_header 'Permissions-Policy' 'camera=()'
 require_header 'Permissions-Policy' 'microphone=()'
+require_header 'Permissions-Policy' 'geolocation=(self)'
 require_header 'Cross-Origin-Opener-Policy' 'same-origin'
 require_header 'Cross-Origin-Resource-Policy' 'same-origin'
 
