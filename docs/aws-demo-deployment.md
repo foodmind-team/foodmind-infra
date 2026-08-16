@@ -138,14 +138,24 @@ Create an S3 gateway VPC endpoint when the network topology supports it. Do not
 place AWS access keys in `.env.aws`; the Backend uses the EC2 role through the
 AWS SDK default credential chain.
 
-Keep `MEDIA_ENABLED=false` until IAM, CORS, and the end-to-end upload/finalise
-test pass.
+Set `MEDIA_ENABLED=true` and `MEDIA_S3_BUCKET` to the stack output only after the
+IAM and CORS change set has been reviewed. The bucket is private, retained on
+stack deletion/replacement, and direct uploads accept only the deployed sslip.io
+origin. Complete the upload/finalise and private-read acceptance test immediately
+after deployment; disable media again if it fails.
 
 ## Secrets
 
 Store one JSON secret in AWS Secrets Manager with values matching the sensitive
 keys in `.env.aws.example`. Grant `secretsmanager:GetSecretValue` only to the EC2
 deployment role and the specific secret ARN.
+
+Create a separate `foodmind/staging/onemap` JSON secret containing only `email`
+and `password`. Pass its exact ARN to the stack parameter and
+`ONEMAP_CREDENTIALS_SECRET_ARN`; do not store the 72-hour access token. When
+`ONEMAP_ROUTES_ENABLED=true`, the Backend caches the token, refreshes it before
+expiry, and retries one unauthorised route request. AWS runtime validation rejects
+`ONEMAP_API_TOKEN`; that variable is retained only for local compatibility.
 
 On the instance, render `/opt/foodmind/foodmind-infra/.env.aws` without printing
 values to the terminal or logs, then run:
@@ -223,8 +233,10 @@ Then complete user-visible UAT:
 4. Generate Recommendation, Cooking, and Chatbot responses.
 5. When media is enabled, upload a supported image and finalise it; verify a
    disallowed origin and foreign owner cannot access it.
-6. Restart the EC2 instance and confirm Caddy and long-running services recover.
-7. Confirm RDS automated backup status and perform a documented restore drill to
+6. Grant browser location permission on a controlled place and verify the OneMap
+   attribution, walking-route summary, and route polyline.
+7. Restart the EC2 instance and confirm Caddy and long-running services recover.
+8. Confirm RDS automated backup status and perform a documented restore drill to
    a separate database before claiming recoverability.
 
 Never include cookies, bearer tokens, presigned URLs, object keys, database
