@@ -140,6 +140,25 @@ if [[ "${media_enabled:-false}" == "true" && -z "$(env_value MEDIA_S3_BUCKET)" ]
   fail "MEDIA_S3_BUCKET is required when MEDIA_ENABLED=true"
 fi
 
+onemap_routes_enabled="$(env_value ONEMAP_ROUTES_ENABLED)"
+case "${onemap_routes_enabled:-false}" in
+  true|false) ;;
+  *) fail "ONEMAP_ROUTES_ENABLED must be true or false" ;;
+esac
+onemap_secret_arn="$(env_value ONEMAP_CREDENTIALS_SECRET_ARN)"
+onemap_api_token="$(env_value ONEMAP_API_TOKEN)"
+if [[ -n "${onemap_secret_arn}" && ! "${onemap_secret_arn}" =~ ^arn:aws:secretsmanager:${aws_region}:[0-9]{12}:secret:foodmind/staging/onemap-[A-Za-z0-9]{6}$ ]]; then
+  fail "ONEMAP_CREDENTIALS_SECRET_ARN must be the exact foodmind/staging/onemap secret ARN in AWS_REGION"
+fi
+if [[ "${onemap_routes_enabled:-false}" == "true" ]]; then
+  if [[ "${VALIDATION_MODE}" == "runtime" ]]; then
+    [[ -n "${onemap_secret_arn}" ]] || fail "ONEMAP_CREDENTIALS_SECRET_ARN is required when OneMap routes are enabled on AWS"
+    [[ -z "${onemap_api_token}" ]] || fail "ONEMAP_API_TOKEN must be empty in AWS runtime; use the credentials secret"
+  elif [[ -z "${onemap_secret_arn}" && -z "${onemap_api_token}" ]]; then
+    fail "OneMap routes require credentials or a local compatibility token"
+  fi
+fi
+
 llm_enabled="$(env_value FOODMIND_LLM_ENABLED)"
 case "${llm_enabled:-false}" in
   true|false) ;;

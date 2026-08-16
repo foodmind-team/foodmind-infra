@@ -5,8 +5,17 @@ Parameters:
   AlertEmail:
     Type: String
     Description: Operational email for the AWS budget and ACME notices.
-    AllowedPattern: '^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$'
+    AllowedPattern: '^[^@\s]+@[^@\s]+\.[^@\s]+$'
     ConstraintDescription: Enter a valid operational email address.
+  OneMapCredentialsSecretArn:
+    Type: String
+    Default: ''
+    Description: Exact ARN of the JSON OneMap credentials secret. Leave empty until provisioned.
+    AllowedPattern: '^$|^arn:aws:secretsmanager:ap-southeast-1:[0-9]{12}:secret:foodmind/staging/onemap-[A-Za-z0-9]{6}$'
+    ConstraintDescription: Use the exact ap-southeast-1 foodmind/staging/onemap secret ARN or leave empty.
+
+Conditions:
+  HasOneMapCredentialsSecret: !Not [!Equals [!Ref OneMapCredentialsSecretArn, '']]
 
 Resources:
   DemoVpc:
@@ -160,8 +169,8 @@ Resources:
 
   MediaBucket:
     Type: AWS::S3::Bucket
-    DeletionPolicy: Delete
-    UpdateReplacePolicy: Delete
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
     Properties:
       BucketEncryption:
         ServerSideEncryptionConfiguration:
@@ -175,6 +184,19 @@ Resources:
       OwnershipControls:
         Rules:
           - ObjectOwnership: BucketOwnerEnforced
+      CorsConfiguration:
+        CorsRules:
+          - AllowedOrigins:
+              - !Sub 'https://${FoodMindEip}.sslip.io'
+            AllowedMethods:
+              - PUT
+            AllowedHeaders:
+              - Content-Type
+              - x-amz-checksum-sha256
+            ExposedHeaders:
+              - ETag
+              - x-amz-checksum-sha256
+            MaxAge: 300
       LifecycleConfiguration:
         Rules:
           - Id: AbortIncompleteMultipartUploads
@@ -207,6 +229,13 @@ Resources:
                 Effect: Allow
                 Action: secretsmanager:GetSecretValue
                 Resource: !GetAtt Database.MasterUserSecret.SecretArn
+              - !If
+                - HasOneMapCredentialsSecret
+                - Sid: ReadOneMapCredentials
+                  Effect: Allow
+                  Action: secretsmanager:GetSecretValue
+                  Resource: !Ref OneMapCredentialsSecretArn
+                - !Ref AWS::NoValue
               - Sid: MediaObjects
                 Effect: Allow
                 Action:

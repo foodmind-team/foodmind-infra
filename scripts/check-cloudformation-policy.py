@@ -52,7 +52,44 @@ def check_template(path: Path) -> list[str]:
                 failures.append(f"{prefix} must retain backups for at least seven days")
             if properties.get("DeletionProtection") is not True:
                 failures.append(f"{prefix} must enable deletion protection")
+        elif resource_type == "AWS::S3::Bucket":
+            if resource.get("DeletionPolicy") != "Retain":
+                failures.append(f"{prefix} must retain data on stack deletion")
+            if resource.get("UpdateReplacePolicy") != "Retain":
+                failures.append(f"{prefix} must retain data when replaced")
+            public_access = properties.get("PublicAccessBlockConfiguration", {})
+            for setting in (
+                "BlockPublicAcls",
+                "BlockPublicPolicy",
+                "IgnorePublicAcls",
+                "RestrictPublicBuckets",
+            ):
+                if public_access.get(setting) is not True:
+                    failures.append(f"{prefix} must set {setting}=true")
+        elif resource_type in {"AWS::IAM::Role", "AWS::IAM::ManagedPolicy"}:
+            policy_documents = [policy.get("PolicyDocument", {}) for policy in properties.get("Policies", [])]
+            if resource_type == "AWS::IAM::ManagedPolicy":
+                policy_documents.append(properties.get("PolicyDocument", {}))
+            for policy_document in policy_documents:
+                for statement in nested_statements(policy_document.get("Statement", [])):
+                    actions = statement.get("Action", [])
+                    if isinstance(actions, str):
+                        actions = [actions]
+                    resource_value = statement.get("Resource")
+                    if "secretsmanager:GetSecretValue" in actions and resource_value in {"*", None}:
+                        failures.append(f"{prefix} must scope secretsmanager:GetSecretValue to an exact ARN")
     return failures
+
+
+def nested_statements(value: object):
+    if isinstance(value, dict):
+        if "Effect" in value and "Action" in value:
+            yield value
+        for nested in value.values():
+            yield from nested_statements(nested)
+    elif isinstance(value, list):
+        for nested in value:
+            yield from nested_statements(nested)
 
 
 def main() -> int:
