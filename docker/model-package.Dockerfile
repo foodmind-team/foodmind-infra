@@ -3,7 +3,12 @@ FROM python:3.13-slim
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1
 
-RUN pip install --no-cache-dir numpy==2.3.2 \
+RUN apt-get update \
+    && apt-get upgrade --yes \
+    && rm -rf /var/lib/apt/lists/* \
+    && python -m pip uninstall --yes setuptools \
+    && pip install --no-cache-dir numpy==2.3.2 \
+    && python -m pip uninstall --yes pip \
     && groupadd --gid 10001 foodmind \
     && useradd --uid 10001 --gid 10001 --no-create-home --shell /usr/sbin/nologin foodmind \
     && mkdir -p /model-package \
