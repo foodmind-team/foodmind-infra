@@ -1,0 +1,87 @@
+name: Staging JMeter performance
+
+on:
+  workflow_dispatch:
+    inputs:
+      target_url:
+        description: Optional HTTPS target; defaults to the staging environment variable
+        required: false
+        type: string
+  schedule:
+    - cron: '0 3 * * 1'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: foodmind-staging-jmeter
+  cancel-in-progress: false
+
+jobs:
+  performance:
+    environment: staging
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+
+      - name: Resolve the HTTPS target
+        id: target
+        env:
+          INPUT_TARGET_URL: ${{ inputs.target_url }}
+          STAGING_BASE_URL: ${{ vars.STAGING_BASE_URL }}
+        run: |
+          set -euo pipefail
+          target_url="${INPUT_TARGET_URL:-${STAGING_BASE_URL}}"
+          python3 - "${target_url}" >> "${GITHUB_OUTPUT}" <<'PY'
+          import sys
+          from urllib.parse import urlsplit
+
+          parsed = urlsplit(sys.argv[1])
+          if parsed.scheme != "https" or not parsed.hostname or parsed.path not in ("", "/"):
+              raise SystemExit("target_url must be an HTTPS origin without a path")
+          print(f"protocol={parsed.scheme}")
+          print(f"host={parsed.hostname}")
+          print(f"port={parsed.port or 443}")
+          PY
+
+      - name: Install checksum-verified Apache JMeter 5.6.3
+        run: |
+          set -euo pipefail
+          curl --fail --silent --show-error --location \
+            --output apache-jmeter-5.6.3.tgz \
+            https://downloads.apache.org/jmeter/binaries/apache-jmeter-5.6.3.tgz
+          echo '5978a1a35edb5a7d428e270564ff49d2b1b257a65e17a759d259a9283fc17093e522fe46f474a043864aea6910683486340706d745fcdf3db1505fd71e689083  apache-jmeter-5.6.3.tgz' | sha512sum --check --strict
+          tar -xzf apache-jmeter-5.6.3.tgz
+
+      - name: Run the 20-sample lightweight performance test
+        run: |
+          set -euo pipefail
+          mkdir -p performance-evidence
+          ./apache-jmeter-5.6.3/bin/jmeter -n \
+            -t tests/performance/staging-smoke.jmx \
+            -Jtarget_protocol='${{ steps.target.outputs.protocol }}' \
+            -Jtarget_host='${{ steps.target.outputs.host }}' \
+            -Jtarget_port='${{ steps.target.outputs.port }}' \
+            -Jjmeter.save.saveservice.output_format=csv \
+            -Jjmeter.save.saveservice.print_field_names=true \
+            -l performance-evidence/results.jtl \
+            -e -o performance-evidence/html
+
+      - name: Enforce error-rate and p95 policy
+        run: >-
+          python3 scripts/performance/check-jmeter-results.py
+          performance-evidence/results.jtl
+          --expected-samples 20
+          --max-error-rate 0
+          --max-p95-ms 2000
+          --summary performance-evidence/summary.json
+
+      - name: Upload performance evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: staging-jmeter-${{ github.sha }}
+          path: performance-evidence/
+          if-no-files-found: error
+          retention-days: 30
