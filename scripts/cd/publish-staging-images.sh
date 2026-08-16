@@ -52,6 +52,7 @@ image_tag="${INFRA_REVISION:0:12}-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
 release_id="staging-${image_tag}"
 docker_config_dir="$(mktemp -d)"
 trivy_cache_dir="$(mktemp -d)"
+docker_socket_gid="$(stat -c '%g' /var/run/docker.sock)"
 manifest_tmp="$(mktemp)"
 cleanup() {
   rm -rf -- "${docker_config_dir}"
@@ -81,20 +82,26 @@ build_and_publish() {
 
   printf 'Generating SBOM for %s...\n' "${image_name}"
   docker run --rm \
+    --user "$(id -u):$(id -g)" \
+    --group-add "${docker_socket_gid}" \
     -v /var/run/docker.sock:/var/run/docker.sock \
-    -v "${trivy_cache_dir}:/root/.cache/trivy" \
+    -v "${trivy_cache_dir}:/tmp/trivy-cache" \
     -v "${SECURITY_EVIDENCE_DIR}:/evidence" \
     "${TRIVY_IMAGE}" image \
+    --cache-dir /tmp/trivy-cache \
     --format cyclonedx \
     --output "/evidence/${image_name}-sbom.cdx.json" \
     "${image_ref}"
 
   printf 'Scanning %s for fixable Medium-or-higher vulnerabilities...\n' "${image_name}"
   docker run --rm \
+    --user "$(id -u):$(id -g)" \
+    --group-add "${docker_socket_gid}" \
     -v /var/run/docker.sock:/var/run/docker.sock \
-    -v "${trivy_cache_dir}:/root/.cache/trivy" \
+    -v "${trivy_cache_dir}:/tmp/trivy-cache" \
     -v "${SECURITY_EVIDENCE_DIR}:/evidence" \
     "${TRIVY_IMAGE}" image \
+    --cache-dir /tmp/trivy-cache \
     --scanners vuln \
     --ignore-unfixed \
     --severity MEDIUM,HIGH,CRITICAL \
