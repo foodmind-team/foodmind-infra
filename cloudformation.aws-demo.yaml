@@ -5,7 +5,7 @@ Parameters:
   AlertEmail:
     Type: String
     Description: Operational email for the AWS budget and ACME notices.
-    AllowedPattern: '^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$'
+    AllowedPattern: '^[^@\s]+@[^@\s]+\.[^@\s]+$'
     ConstraintDescription: Enter a valid operational email address.
   OneMapCredentialsSecretArn:
     Type: String
