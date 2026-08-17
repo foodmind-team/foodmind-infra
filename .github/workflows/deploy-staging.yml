@@ -128,7 +128,7 @@ jobs:
               "set -eu",
               "repo=/opt/foodmind/foodmind-infra",
               "test -d ${repo}/.git",
-              "git -c safe.directory=${repo} -C ${repo} fetch --no-tags origin " + $revision,
+              "git -c safe.directory=${repo} -C ${repo} fetch --refetch --no-tags origin " + $revision,
               "if [ ! -d " + $runtime + " ]; then mkdir -p /opt/foodmind/cd-runtime && git -c safe.directory=${repo} -C ${repo} worktree add --detach " + $runtime + " " + $revision + "; fi",
               "printf %s " + $manifest + " | base64 --decode > " + $runtime + "/release-manifest.json",
               "chmod 600 " + $runtime + "/release-manifest.json",
