@@ -60,9 +60,10 @@ and rolling back application images on failure.
 4. `Deploy staging` starts only after publication succeeds. It downloads that
    run's manifest, validates every digest and source SHA, and assumes the
    separate deployment role through OIDC.
-5. Systems Manager refetches the tested Infra SHA to repair any missing partial-
-   clone objects, creates an immutable Git worktree on EC2, and runs
-   `scripts/cd/deploy-staging.sh`.
+5. Systems Manager refetches the tested Infra SHA while bypassing any stale
+   commit graph, creates an immutable Git worktree on EC2, and runs
+   `scripts/cd/deploy-staging.sh`. This lets a partial clone recover missing
+   objects without changing the tested revision.
 6. The deploy script serialises deployments, pulls the seven digests, starts the
    Compose project without building, and runs private plus public readiness
    checks.
