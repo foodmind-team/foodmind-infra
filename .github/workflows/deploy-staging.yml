@@ -128,8 +128,8 @@ jobs:
               "set -eu",
               "repo=/opt/foodmind/foodmind-infra",
               "test -d ${repo}/.git",
-              "git -c safe.directory=${repo} -C ${repo} fetch --refetch --no-tags origin " + $revision,
-              "if [ ! -d " + $runtime + " ]; then mkdir -p /opt/foodmind/cd-runtime && git -c safe.directory=${repo} -C ${repo} worktree add --detach " + $runtime + " " + $revision + "; fi",
+              "git -c safe.directory=${repo} -c core.commitGraph=false -C ${repo} fetch --refetch --no-tags origin " + $revision,
+              "if [ ! -d " + $runtime + " ]; then mkdir -p /opt/foodmind/cd-runtime && git -c safe.directory=${repo} -c core.commitGraph=false -C ${repo} worktree add --detach " + $runtime + " " + $revision + "; fi",
               "printf %s " + $manifest + " | base64 --decode > " + $runtime + "/release-manifest.json",
               "chmod 600 " + $runtime + "/release-manifest.json",
               $runtime + "/scripts/cd/deploy-staging.sh " + $runtime + "/release-manifest.json /opt/foodmind/foodmind-infra/.env.aws"
