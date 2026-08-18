@@ -41,7 +41,7 @@ jobs:
           [[ "${revision}" =~ ^[0-9a-f]{40}$ ]]
           echo "sha=${revision}" >> "${GITHUB_OUTPUT}"
 
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5
         with:
           ref: ${{ steps.revision.outputs.sha }}
           path: infra
@@ -55,7 +55,7 @@ jobs:
           ./scripts/cd/validate-release-source.sh releases/staging-source.json
           echo "web_revision=$(jq -r '.web_revision' releases/staging-source.json)" >> "${GITHUB_OUTPUT}"
 
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5
         with:
           repository: foodmind-team/foodmind-web
           ref: ${{ steps.source.outputs.web_revision }}

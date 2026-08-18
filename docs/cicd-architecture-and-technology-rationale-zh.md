@@ -280,7 +280,7 @@ PR 新 commit 可以取消旧的、尚未完成的检查，以节省 runner 时�
 第三方 Action 使用完整 commit SHA，例如：
 
 ```yaml
-uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5
 ```
 
 完整 SHA 比可移动 tag 更能抵御供应链替换；注释保留人类可读的逻辑版本。
