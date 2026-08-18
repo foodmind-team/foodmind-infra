@@ -103,10 +103,36 @@ elif [[ ! -f "${rollback_env}" ]]; then
 fi
 
 "${SCRIPT_DIR}/render-release-env.sh" "${MANIFEST_FILE}" "${release_env}.candidate"
-candidate_compose=(docker compose --env-file "${ENV_FILE}" --env-file "${release_env}.candidate" "${compose_files[@]}")
+candidate_compose=(docker compose --ansi never --progress plain --env-file "${ENV_FILE}" --env-file "${release_env}.candidate" "${compose_files[@]}")
 
 printf 'Pulling immutable images for release %s...\n' "${release_id}"
-"${candidate_compose[@]}" pull model-package inference recommendation cooking chatbot backend web
+pull_diagnostics() {
+  printf 'Pull diagnostics for release %s:\n' "${release_id}" >&2
+  df -h "${STATE_DIR}" /var/lib/docker 2>&1 || true
+  docker system df 2>&1 || true
+  docker info --format 'Docker server={{.ServerVersion}} storage={{.Driver}} root={{.DockerRootDir}}' 2>&1 || true
+}
+
+for service in model-package inference recommendation cooking chatbot backend web; do
+  pull_attempt=1
+  while (( pull_attempt <= 3 )); do
+    printf 'Pulling image for service %s (attempt %d/3)...\n' "${service}" "${pull_attempt}"
+    if "${candidate_compose[@]}" pull "${service}"; then
+      break
+    fi
+    if (( pull_attempt == 3 )); then
+      printf 'ERROR: failed to pull immutable image for service %s after %d attempts.\n' \
+        "${service}" "${pull_attempt}" >&2
+      pull_diagnostics
+      exit 1
+    fi
+    retry_delay=$((pull_attempt * 10))
+    printf 'WARN: pull failed for service %s; retrying in %d seconds.\n' \
+      "${service}" "${retry_delay}" >&2
+    sleep "${retry_delay}"
+    pull_attempt=$((pull_attempt + 1))
+  done
+done
 "${candidate_compose[@]}" config --quiet
 
 rollback() {
