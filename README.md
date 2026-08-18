@@ -12,7 +12,7 @@ private RDS PostgreSQL and optional S3 instead of the local PostgreSQL/MinIO
 services, and publishes only ports 80/443. It is intentionally not the
 production ECS architecture. See [AWS demo deployment](docs/aws-demo-deployment.md).
 The digest-pinned staging release path is documented in
-[staging continuous delivery](docs/staging-continuous-delivery.md).
+[staging continuous delivery](docs/staging-continuous-delivery.md). Test.
 
 ## Quick start
 
@@ -53,16 +53,16 @@ their deterministic controlled path; a missing key never blocks Compose.
 
 ## What starts
 
-| Service | Host address | Responsibility |
-| --- | --- | --- |
-| Backend | `http://localhost:8080` | Public API, authentication, persistence, final validation |
-| PostgreSQL 18.4 | `localhost:15432` by default | Persistent relational data |
-| MinIO API / console | `localhost:9000` / `localhost:9001` | S3-compatible local object storage |
-| Chatbot | internal `:8001` | Read-only authorised platform exploration |
-| Inference | internal `:8002` | ML scoring only |
-| Cooking Agent | internal `:8003` | Cooking-plan workflow |
-| Recommendation Agent | internal `:8004` | ML-result validation and explanation |
-| Model Package job | no port | Builds the checked-in ML artifact into a shared runtime volume |
+| Service              | Host address                            | Responsibility                                                 |
+| -------------------- | --------------------------------------- | -------------------------------------------------------------- |
+| Backend              | `http://localhost:8080`               | Public API, authentication, persistence, final validation      |
+| PostgreSQL 18.4      | `localhost:15432` by default          | Persistent relational data                                     |
+| MinIO API / console  | `localhost:9000` / `localhost:9001` | S3-compatible local object storage                             |
+| Chatbot              | internal`:8001`                       | Read-only authorised platform exploration                      |
+| Inference            | internal`:8002`                       | ML scoring only                                                |
+| Cooking Agent        | internal`:8003`                       | Cooking-plan workflow                                          |
+| Recommendation Agent | internal`:8004`                       | ML-result validation and explanation                           |
+| Model Package job    | no port                                 | Builds the checked-in ML artifact into a shared runtime volume |
 
 Agents are intentionally not published to the host. Backend is their only
 public integration boundary. Use `docker compose exec <service> ...` for
