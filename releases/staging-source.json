@@ -1,5 +1,5 @@
 {
   "schema_version": 1,
-  "database_migrations": false,
-  "web_revision": "d83616f130c02d0c03ef62c7e7dce58f3bdceff7"
+  "database_migrations": true,
+  "web_revision": "5f2c68b8f40b0fd5b5f6d6a336d646e225874e47"
 }
