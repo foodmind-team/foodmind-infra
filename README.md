@@ -8,6 +8,10 @@ private RDS PostgreSQL and optional S3 instead of the local PostgreSQL/MinIO
 services, and publishes only ports 80/443. It is intentionally not the
 production ECS architecture. See [AWS demo deployment](docs/aws-demo-deployment.md).
 
+## Live deployment
+
+The current AWS demonstration environment is available at [https://13.229.2.154.sslip.io/](https://13.229.2.154.sslip.io/). Caddy terminates HTTPS, serves the Web client at `/`, and routes `/api/v1` to the Backend; private runtime services and the database are not publicly exposed.
+
 ## What starts locally
 
 | Service | Host address | Role |
