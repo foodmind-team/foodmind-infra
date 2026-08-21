@@ -91,6 +91,43 @@ Copy [.env.example](.env.example) to .env. Its values are local placeholders, no
 - POSTGRES_*, MINIO_*, and *_PORT configure local dependencies and host ports.
 - JWT_SECRET and the internal service tokens must be changed before sharing a local environment.
 - FOODMIND_LLM_ENABLED=false is a fully supported deterministic fallback mode. Add a provider key only to the ignored .env.
+
+## API keys and service tokens
+
+The integrated stack reads secrets and optional provider settings from the
+ignored root `.env`; copy `.env.example` first and edit only that copy. Do not
+put a real value in Compose files, a README, a client `.env`, or a Git commit.
+
+```dotenv
+# Use unique local values; replace these placeholders before sharing an environment.
+JWT_SECRET=<random-local-secret-at-least-32-characters>
+INTERNAL_SERVICE_TOKEN=<backend-internal-tools-token>
+RECOMMENDATION_AGENT_SERVICE_TOKEN=<recommendation-service-token>
+INFERENCE_INTERNAL_SERVICE_TOKEN=<inference-service-token>
+COOKING_AGENT_SERVICE_TOKEN=<cooking-service-token>
+CHAT_AGENT_SERVICE_TOKEN=<chat-service-token>
+
+# Optional OneMap walking routes
+ONEMAP_ROUTES_ENABLED=true
+ONEMAP_API_TOKEN=<onemap-access-token>
+
+# Optional provider-backed Agent enhancements
+FOODMIND_LLM_ENABLED=true
+DEEPSEEK_API_KEY=<provider-api-key>
+```
+
+Leave both optional features disabled and their keys blank when they are not
+needed: the stack remains usable with deterministic fallbacks. OneMap and LLM
+keys belong only in Infra because the Backend and private services consume them
+inside Docker; Web and Android never receive them. Compose injects the five
+service-token values into their matching Backend/Agent boundaries. When running
+a component outside Infra, configure the same corresponding pair on both sides
+of that private boundary rather than inventing a client token.
+
+For local MinIO, `MINIO_ROOT_USER`, `MINIO_ROOT_PASSWORD`, and the `MEDIA_*`
+values remain in this `.env`. Keep `MEDIA_ENABLED=false` unless the configured
+S3 endpoint is browser-reachable; a private Docker hostname cannot be used by
+a browser for presigned uploads.
 - MEDIA_ENABLED=false is the safe default: browser-accessible uploads require a deliberate, reachable S3 configuration.
 - FOODMIND_COLLABORATIVE_INDEX_PATH is optional and must refer to a verified, HMAC-pseudonymised index; never create it from menu seed data.
 
