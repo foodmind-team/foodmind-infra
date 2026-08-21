@@ -45,6 +45,45 @@ For an existing clone, run git submodule update --init --recursive before the fi
 
 Run FoodMind Web separately from its repository with FOODMIND_BACKEND_ORIGIN=http://localhost:8080.
 
+## Local deployment (recommended full stack)
+
+Use this repository when a complete local product journey is needed. It is the
+only one-command runtime for the Backend, PostgreSQL, MinIO, Intelligence
+services, and the ML model-package job. Web and Android are deliberately kept
+outside this Compose project and connect only to the Backend.
+
+On Windows PowerShell, clone with the pinned component sources, create a local
+environment file, validate it, and start the health-gated stack:
+
+```powershell
+git clone --recurse-submodules https://github.com/foodmind-team/foodmind-infra.git
+Set-Location foodmind-infra
+git submodule update --init --recursive
+Copy-Item .env.example .env
+docker compose config --quiet
+docker compose up --build -d --wait
+Invoke-RestMethod http://localhost:8080/actuator/health/readiness
+docker compose ps
+```
+
+`./scripts/bootstrap.ps1` performs the submodule, `.env`, and startup steps;
+`./scripts/verify.ps1` additionally waits for Backend readiness. The equivalent
+shell setup is `cp .env.example .env` followed by the same `docker compose`
+commands. Keep the default `FOODMIND_LLM_ENABLED=false` unless an optional
+provider key has been placed only in the ignored `.env` file.
+
+The normal local addresses are Backend `http://localhost:8080`, PostgreSQL
+`localhost:15432`, and MinIO `http://localhost:9000` (console `9001`). Agent
+and inference containers are private to the `foodmind-runtime` network. If a
+host port is occupied, change the corresponding public port in `.env` and run
+the Compose commands again; do not change container-to-container addresses.
+
+To inspect a failed startup, use `docker compose logs -f backend postgres
+inference recommendation cooking chatbot`. `docker compose down` stops the
+stack while retaining local data. `docker compose down --volumes` also deletes
+the local PostgreSQL, MinIO, and model-package volumes, so use it only when the
+loss of local development data is intended.
+
 ## Configuration
 
 Copy [.env.example](.env.example) to .env. Its values are local placeholders, not production secrets.
